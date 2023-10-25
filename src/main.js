@@ -3,6 +3,8 @@ const db = require("./config/db")
 const productRoute = require("./controllers/product/productController")
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const brandRoute = require("./controllers/brand/brandController");
+const newsRoute = require("./controllers/new/newController");
 
 db.connect()
 const corsOptions = {
@@ -21,6 +23,8 @@ app.use(bodyParser.urlencoded({ extended: true,
 }));
 
 app.use('/api',productRoute)
+app.use('/api',brandRoute)
+app.use('/api',newsRoute)
 
 app.get('/', (req, res) => {
   res.send('Hello World!')
