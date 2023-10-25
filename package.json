@@ -1,0 +1,36 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "backend for headphone project",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon src/main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hoanganh2001/backend.git"
+  },
+  "keywords": [
+    "backend",
+    "nodejs",
+    "headphone",
+    "project"
+  ],
+  "author": "cobeopro",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hoanganh2001/backend/issues"
+  },
+  "homepage": "https://github.com/hoanganh2001/backend#readme",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "mongoose": "^7.6.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "ts-node": "^10.9.1"
+  }
+}
