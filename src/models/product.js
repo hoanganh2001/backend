@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const Schema = mongoose.Schema;
 const ObjectId = Schema.ObjectId;
@@ -9,8 +9,8 @@ const Product = new Schema({
   name: String,
   cost: Number,
   discount: Number,
-  view: Number
+  view: Number,
+  category: ObjectId,
 });
 
-module.exports = mongoose.model('Product', Product)
-
+module.exports = mongoose.model('Product', Product);

@@ -5,7 +5,8 @@ const Brand = require('../../models/brands')
 const brandRoute = express.Router();
 
 brandRoute.get('/brands', (req,res)=>{
-    Brand.find()
+    const paginatorOtion = {limit: req.query.limit,skip: req.query.skip}
+    Brand.find({},{},paginatorOtion)
     .then((brand) => {
         res.json({data: brand})
     })
