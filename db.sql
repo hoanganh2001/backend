@@ -1,2 +1,1 @@
-select * from features;
-select * from types;
+select * from brands
