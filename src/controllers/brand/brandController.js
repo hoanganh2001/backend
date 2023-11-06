@@ -1,18 +1,37 @@
-const express = require("express");
-const Brand = require('../../models/brands')
-
-
+const express = require('express');
+const db = require('../../config/db');
+const oracledb = require('oracledb');
 const brandRoute = express.Router();
 
-brandRoute.get('/brands', (req,res)=>{
-    const paginatorOtion = {limit: req.query.limit,skip: req.query.skip}
-    Brand.find({},{},paginatorOtion)
-    .then((brand) => {
-        res.json({data: brand})
-    })
-    .catch((err)=> {
-        res.status(400).json({error: err})
-    })
-})
+brandRoute.get('/brands', (req, res) => {
+  db.connect().then((connect) => {
+    const pageLimit = `FETCH NEXT ${
+      req.query.limit ? req.query.limit : 10
+    } ROWS ONLY `;
+    const pageOffset =
+      ' ' + (req.query.offset ? `OFFSET ${req.query.offset} ROWS` : '');
+    const query =
+      `SELECT * FROM brands ORDER BY NAME ASC` + pageOffset + pageLimit;
 
-module.exports = brandRoute
+    connect.execute(query, {}, { resultSet: true }, (err, result) => {
+      if (err) {
+        console.error(err.message);
+        res.status(500).send('Error getting data from DB');
+        db.doRelease(connect);
+        return;
+      }
+      result.resultSet.getRows((err, rows) => {
+        if (err) throw err;
+        rows = rows.map((item) => {
+          return Object.fromEntries(
+            Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
+          );
+        });
+        res.json({ data: rows });
+      });
+      db.doRelease(connect);
+    });
+  });
+});
+
+module.exports = brandRoute;

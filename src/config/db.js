@@ -1,13 +1,37 @@
-const mongoose = require( 'mongoose');
+const oracledb = require('oracledb');
+oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 
-async function connect() {
-    try {
-        await mongoose.connect('mongodb://127.0.0.1:27017/DoAn', {useNewUrlParser: true, useUnifiedTopology: true})
-        console.log('DB connect succsess!');
-    } catch (err) {
-        console.log('DB connect fail!');
-        console.log(err.message);
-    }
+const config = {
+  user: 'SYSTEM',
+  password: 'hoanganh',
+  connectString: 'localhost:1521/xe',
+};
+
+async function createPool() {
+  try {
+    conn = await oracledb.createPool(config);
+    console.log('Create pool success!');
+    return;
+  } catch (err) {
+    console.log('Create pool fail!');
+    console.log(err.message);
+  }
 }
 
-module.exports = {connect}
+async function connect() {
+  try {
+    return await oracledb.getConnection();
+  } catch (err) {
+    console.log(err.message);
+  }
+}
+
+function doRelease(connection) {
+  connection.release(function (err) {
+    if (err) {
+      console.error(err.message);
+    }
+  });
+}
+
+module.exports = { connect, createPool, doRelease };
