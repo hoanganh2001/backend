@@ -5,9 +5,9 @@ const brandRoute = express.Router();
 
 brandRoute.get('/brands', (req, res) => {
   db.connect().then((connect) => {
-    const pageLimit = `FETCH NEXT ${
-      req.query.limit ? req.query.limit : 10
-    } ROWS ONLY `;
+    const pageLimit = req.query.limit
+      ? `FETCH NEXT ${req.query.limit} ROWS ONLY `
+      : '';
     const pageOffset =
       ' ' + (req.query.offset ? `OFFSET ${req.query.offset} ROWS` : '');
     const query =
