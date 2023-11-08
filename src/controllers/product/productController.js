@@ -10,7 +10,9 @@ productRoute.get('/products', (req, res) => {
   db.connect().then((connect) => {
     const where = req.query.category_name
       ? `in (SELECT id FROM categories where name like '%${req.query.category_name}%')`
-      : `= ${req.query.category_id})`;
+      : req.query.category_id
+      ? `= ${req.query.category_id}`
+      : '';
     const logic =
       req.query.category_id || req.query.category_name
         ? `where pd.id in (select product_detail_id from product_category where category_id ${where})`
@@ -31,7 +33,6 @@ productRoute.get('/products', (req, res) => {
       sort_by +
       pageOffset +
       pageLimit;
-    console.log(query);
 
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
