@@ -7,21 +7,25 @@ const oracledb = require('oracledb');
 const productRoute = express.Router();
 
 productRoute.get('/products', (req, res) => {
-  db.connect().then((connect) => {
+  db.connect().then(async (connect) => {
     const where = req.query.category_name
       ? `in (SELECT id FROM categories where name like '%${req.query.category_name}%')`
       : req.query.category_id
-      ? `= ${req.query.category_id}`
+      ? `= ${req.query.category_id} `
       : '';
     const logic =
-      req.query.category_id || req.query.category_name
-        ? `where pd.id in (select product_detail_id from product_category where category_id ${where})`
-        : '';
+      (req.query.category_id || req.query.category_name
+        ? `where pd.id in (select product_detail_id from product_category where category_id ${where}) `
+        : '') +
+      (req.query.brand_id ? `and pd.brand_id = ${req.query.brand_id}` : '');
     const pageLimit = `FETCH NEXT ${
       req.query.limit ? req.query.limit : 10
     } ROWS ONLY `;
     const pageOffset =
-      ' ' + (req.query.offset ? `OFFSET ${req.query.offset} ROWS` : '');
+      ' ' +
+      (req.query.offset && req.query.offset > 0
+        ? `OFFSET ${req.query.offset} ROWS `
+        : '');
     const sort_by =
       (req.query.sort_by
         ? `ORDER BY ${req.query.sort_by.toUpperCase()}`
@@ -34,6 +38,13 @@ productRoute.get('/products', (req, res) => {
       pageOffset +
       pageLimit;
 
+    const lengthQuery =
+      `SELECT count(pd.id)  as length
+    FROM product_detail  pd
+     ` + logic;
+    const length = await (
+      await connect.execute(lengthQuery, {})
+    ).rows[0].LENGTH;
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
         console.error(err.message);
@@ -48,23 +59,18 @@ productRoute.get('/products', (req, res) => {
             Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
           );
         });
-        res.json({ data: rows });
+        res.json({
+          data: rows,
+          meta: {
+            limit: parseInt(req.query.limit),
+            offset: parseInt(req.query.offset ? req.query.offset : 0),
+            length: length,
+          },
+        });
       });
       db.doRelease(connect);
     });
   });
-  // const paginatorOtion = { limit: req.query.limit, skip: req.query.skip };
-  // const sortOption = [[req.query.sort_by, req.query.order_by]];
-  // let searchOption;
-  // if (req.query.category) searchOption = { category: req.query.category };
-  // Product.find(searchOption, {}, paginatorOtion)
-  //   .sort(sortOption)
-  //   .then((products) => {
-  //     res.json({ data: products });
-  //   })
-  //   .catch((err) => {
-  //     res.status(400).json({ error: err });
-  //   });
 });
 
 module.exports = productRoute;

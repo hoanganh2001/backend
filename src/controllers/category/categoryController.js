@@ -10,6 +10,8 @@ categoryRoute.get('/categories', (req, res) => {
 
     const where = req.query.category_name
       ? `where cs.name like '${req.query.category_name}'`
+      : req.query.category_id
+      ? `where cs.id = ${req.query.category_id}`
       : '';
 
     const typeQuery = `SELECT t.id,t.name, ct.name as category_type_header, ct.category_id as category_id, cs.name as category_name FROM types t
