@@ -11,27 +11,15 @@ function getQueryString(params, logicOnly) {
   let page = '';
   let sort = '';
   Object.keys(params).forEach((t) => {
-    const type = paramsKey.find((k) => {
+    const keyDetail = paramsKey.find((k) => {
       return k.keys.includes(t);
-    })?.type;
-    switch (type) {
+    });
+    switch (keyDetail?.type) {
       case 'logic':
-        const logic = `pd.id in (select product_detail_id from product_category where ${
-          t.includes('name')
-            ? `${t.replace(
-                '_name',
-                '_id',
-              )} in (SELECT id FROM categories where name like '%${
-                params[t]
-              }%'))`
-            : Array.isArray(params[t])
-            ? `${t} in (${params[t]}))`
-            : `${t}  = ${params[t]}) `
-        }`;
         if (where.length === 0) {
-          where += `where ${logic} `;
+          where += `where ${generateWhereLogicQuery(keyDetail, params, t)} `;
         } else {
-          where += `and ${logic} `;
+          where += `and ${generateWhereLogicQuery(keyDetail, params, t)} `;
         }
         break;
       case 'page':
@@ -61,10 +49,47 @@ function getQueryString(params, logicOnly) {
   return where + sort + ' ' + page;
 }
 
+function generateWhereLogicQuery(keyDetail, paramsList, param) {
+  if (keyDetail?.compare === 'text') {
+    return `pd.id in (select product_detail_id from product_category where ${param.replace(
+      '_name',
+      '_id',
+    )} in (SELECT id FROM ${
+      param.includes('category') ? 'categories' : param.replace('_name', 's')
+    } where name like '%${paramsList[param]}%'))`;
+  }
+  if (keyDetail?.compare === 'number') {
+    return `pd.id in (select product_detail_id from product_category where ${param} in (SELECT id FROM ${
+      param.includes('category') ? 'categories' : param.replace('_id', 's')
+    } where ${
+      Array.isArray(paramsList[param])
+        ? `${param} in (${paramsList[param]}))`
+        : `${param}  = ${paramsList[param]}) `
+    })`;
+  }
+  if (keyDetail?.compare === 'range') {
+    return param.includes('start')
+      ? `pd.price >= ${paramsList[param]}`
+      : `pd.price <= ${paramsList[param]}`;
+  }
+  return;
+}
+
 paramsKey = [
   {
-    keys: ['category_id', 'brand_id', 'type_id', 'feature_id', 'category_name'],
+    keys: ['category_id', 'brand_id', 'type_id', 'feature_id'],
     type: 'logic',
+    compare: 'number',
+  },
+  {
+    keys: ['category_name'],
+    type: 'logic',
+    compare: 'text',
+  },
+  {
+    keys: ['start_price', 'end_price'],
+    type: 'logic',
+    compare: 'range',
   },
   {
     keys: ['limit', 'offset'],
@@ -104,7 +129,7 @@ productRoute.get('/products', (req, res) => {
         res.json({
           data: rows,
           meta: {
-            limit: parseInt(req.query.limit),
+            limit: parseInt(req.query.limit ? req.query.limit : 28),
             offset: parseInt(req.query.offset ? req.query.offset : 0),
             length: length,
           },
@@ -114,5 +139,8 @@ productRoute.get('/products', (req, res) => {
     });
   });
 });
-
+productRoute.get('/product-detail/', (req, res) => {
+  console.log(1);
+  console.log(req);
+});
 module.exports = productRoute;

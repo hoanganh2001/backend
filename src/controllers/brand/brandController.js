@@ -40,10 +40,9 @@ brandRoute.get('/brands', (req, res) => {
   });
 });
 
-brandRoute.get('/brands-categories', (req, res) => {
+brandRoute.get('/categories-of-brand', (req, res) => {
   if (!req.query.brand_id) {
     res.status(404).send('Do not have brand id');
-    db.doRelease(connect);
     return;
   }
   db.connect().then((connect) => {
@@ -51,6 +50,40 @@ brandRoute.get('/brands-categories', (req, res) => {
 
     const query = `SELECT pc.category_id as id, c.name FROM product_detail pd left join product_category pc on pd.id = pc.product_detail_id left join categories c on c.id = pc.category_id
       where pd.brand_id = ${req.query.brand_id} group by pc.category_id, c.name  ORDER BY id ASC`;
+
+    connect.execute(query, {}, { resultSet: true }, (err, result) => {
+      if (err) {
+        console.error(err.message);
+        res.status(500).send('Error getting data from DB');
+        db.doRelease(connect);
+        return;
+      }
+      result.resultSet.getRows((err, rows) => {
+        if (err) throw err;
+        rows = rows.map((item) => {
+          return Object.fromEntries(
+            Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
+          );
+        });
+        res.json({ data: rows });
+      });
+      db.doRelease(connect);
+    });
+  });
+});
+
+brandRoute.get('/brands-with-category', (req, res) => {
+  if (!req.query.category_id) {
+    res.status(404).send('Do not have brand id');
+    return;
+  }
+  db.connect().then((connect) => {
+    const query = `SELECT pd.brand_id as id, b.name FROM product_category pc 
+    left join product_detail pd on pd.id = pc.product_detail_id 
+    left join brands b on b.id = pd.brand_id 
+    where pc.category_id = ${req.query.category_id} 
+    group by pd.brand_id, b.name
+    order by b.name`;
 
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
