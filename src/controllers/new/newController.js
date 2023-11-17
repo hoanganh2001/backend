@@ -1,42 +1,88 @@
-const express = require("express");
-const News = require('../../models/news')
-
+const express = require('express');
 
 const newsRoute = express.Router();
+const db = require('../../config/db');
+const oracledb = require('oracledb');
 
-newsRoute.get('/news-lastest', (req,res)=>{
-    News.find({},{},{limit: 5,skip: 0,sort: {create_date: -1}})
-    .then((news) => {
-        res.json({data: news})
-    })
-    .catch((err)=> {
-        res.status(400).json({error: err})
-    })
-})
+oracledb.fetchAsString = [oracledb.CLOB];
+newsRoute.get('/news-lastest', (req, res) => {
+  db.connect().then(async (connect) => {
+    const sqlQuery = `Select * from news order by create_date OFFSET 0 ROWS FETCH NEXT 5 ROWS ONLY `;
 
-newsRoute.get('/news-list', (req,res)=>{
-    const paginatorOtion = {limit: req.query.limit,skip: req.query.skip + 5}
-    const resData = {data: [], meta: {length: 0}}
-    News.countDocuments({}).then((count)=>{resData.meta.length = count - 5;})
-    News.find({},'_id name img create_date view author',paginatorOtion).sort({create_date: -1})
-    .then((news) => {
-        resData.data = news;
-        res.json(resData);
-    })
-    .catch((err)=> {
-        res.status(400).json({error: err})
-    })
-})
+    connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
+      if (err) {
+        console.error(err.message);
+        res.status(500).send('Error getting data from DB');
+        db.doRelease(connect);
+        return;
+      }
+      result.resultSet.getRows((err, rows) => {
+        if (err) throw err;
+        rows = rows.map((item) => {
+          return Object.fromEntries(
+            Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
+          );
+        });
+        res.json({ data: rows });
+        db.doRelease(connect);
+      });
+    });
+  });
+});
 
-newsRoute.get('/new', (req,res)=>{
-    const newId = req.query.id
-    News.findById(newId)
-    .then((news) => {
-        res.json({data:news});
-    })
-    .catch((err)=> {
-        res.status(400).json({error: err})
-    })
-})
+newsRoute.get('/news-list', (req, res) => {
+  db.connect().then(async (connect) => {
+    const sqlQuery = `Select * from news order by create_date OFFSET ${
+      req.query.offset + 5
+    } ROWS FETCH NEXT ${req.query.limit} ROWS ONLY `;
+    const lengthQuery = `SELECT count(id) as length FROM news`;
+    const length = await (
+      await connect.execute(lengthQuery, {})
+    ).rows[0].LENGTH;
+    connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
+      if (err) {
+        console.error(err.message);
+        res.status(500).send('Error getting data from DB');
+        db.doRelease(connect);
+        return;
+      }
+      result.resultSet.getRows((err, rows) => {
+        if (err) throw err;
+        rows = rows.map((item) => {
+          return Object.fromEntries(
+            Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
+          );
+        });
+        res.json({ data: rows, meta: length - 5 });
+        db.doRelease(connect);
+      });
+    });
+  });
+});
 
-module.exports = newsRoute
+newsRoute.get('/new/:id', (req, res) => {
+  const newId = req.params.id;
+  db.connect().then(async (connect) => {
+    const sqlQuery = `Select * from news where id = ${newId} `;
+    connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
+      if (err) {
+        console.error(err.message);
+        res.status(500).send('Error getting data from DB');
+        db.doRelease(connect);
+        return;
+      }
+      result.resultSet.getRows((err, rows) => {
+        if (err) throw err;
+        rows = rows.map((item) => {
+          return Object.fromEntries(
+            Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
+          );
+        });
+        res.json({ data: rows });
+        db.doRelease(connect);
+      });
+    });
+  });
+});
+
+module.exports = newsRoute;

@@ -7,7 +7,8 @@ const bodyParser = require('body-parser');
 const productRoute = require('./controllers/product/productController');
 const brandRoute = require('./controllers/brand/brandController');
 const categoryRoute = require('./controllers/category/categoryController');
-// const newsRoute = require('./controllers/new/newController');
+const newsRoute = require('./controllers/new/newController');
+
 db.createPool();
 const corsOptions = {
   origin: '*',
@@ -26,7 +27,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/api', productRoute);
 app.use('/api', brandRoute);
 app.use('/api', categoryRoute);
-// app.use('/api', newsRoute);
+app.use('/api', newsRoute);
 
 app.get('/', (req, res) => {
   res.send('Hello World!');

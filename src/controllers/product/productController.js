@@ -3,10 +3,11 @@ const db = require('../../config/db');
 const oracledb = require('oracledb');
 
 // const Product = require('../../models/product');
+oracledb.fetchAsString = [oracledb.CLOB];
 
 const productRoute = express.Router();
 
-function getQueryString(params, logicOnly) {
+function getQueryString(params, logicOnly, haveDefaultLogic) {
   let where = '';
   let page = '';
   let sort = '';
@@ -16,7 +17,7 @@ function getQueryString(params, logicOnly) {
     });
     switch (keyDetail?.type) {
       case 'logic':
-        if (where.length === 0) {
+        if (where.length === 0 && !haveDefaultLogic) {
           where += `where ${generateWhereLogicQuery(keyDetail, params, t)} `;
         } else {
           where += `and ${generateWhereLogicQuery(keyDetail, params, t)} `;
@@ -40,9 +41,9 @@ function getQueryString(params, logicOnly) {
         break;
     }
   });
-  if (page.length === 0) {
+  if (page.trim().length === 0) {
     page = `FETCH NEXT 28 ROWS ONLY `;
-  } else if (sort.length === 0) {
+  } else if (sort.trim().length === 0) {
     sort = `ORDER BY CREATE_DATE DESC`;
   }
   if (logicOnly) return where;
@@ -59,6 +60,12 @@ function generateWhereLogicQuery(keyDetail, paramsList, param) {
     } where name like '%${paramsList[param]}%'))`;
   }
   if (keyDetail?.compare === 'number') {
+    if (param === 'id')
+      return `pd.id ${
+        Array.isArray(paramsList[param])
+          ? `in (${paramsList[param]})`
+          : `= ${paramsList[param]}) `
+      }`;
     return `pd.id in (select product_detail_id from product_category where ${param} in (SELECT id FROM ${
       param.includes('category') ? 'categories' : param.replace('_id', 's')
     } where ${
@@ -77,7 +84,7 @@ function generateWhereLogicQuery(keyDetail, paramsList, param) {
 
 paramsKey = [
   {
-    keys: ['category_id', 'brand_id', 'type_id', 'feature_id'],
+    keys: ['category_id', 'brand_id', 'type_id', 'feature_id', 'id'],
     type: 'logic',
     compare: 'number',
   },
@@ -102,6 +109,7 @@ paramsKey = [
 ];
 
 productRoute.get('/products', (req, res) => {
+  console.log(req);
   db.connect().then(async (connect) => {
     const query =
       `SELECT pd.* FROM product_detail pd ` + getQueryString(req.query);
@@ -139,8 +147,79 @@ productRoute.get('/products', (req, res) => {
     });
   });
 });
-productRoute.get('/product-detail/', (req, res) => {
-  console.log(1);
-  console.log(req);
+
+productRoute.get('/promotional-product', (req, res) => {
+  db.connect().then(async (connect) => {
+    const query =
+      `SELECT * FROM product_detail pd where gift_id is not null or discount is not null ` +
+      getQueryString(req.query, false, true);
+    const lengthQuery =
+      `SELECT count(id) as length FROM product_detail pd where gift_id is not null or discount is not null ` +
+      getQueryString(req.query, true, true);
+    const length = await (
+      await connect.execute(lengthQuery, {})
+    ).rows[0].LENGTH;
+    connect.execute(query, {}, { resultSet: true }, (err, result) => {
+      if (err) {
+        console.error(err.message);
+        res.status(500).send('Error getting data from DB');
+        db.doRelease(connect);
+        return;
+      }
+      result.resultSet.getRows((err, rows) => {
+        if (err) throw err;
+        rows = rows.map((item) => {
+          return Object.fromEntries(
+            Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
+          );
+        });
+        res.json({
+          data: rows,
+          meta: {
+            limit: parseInt(req.query.limit ? req.query.limit : 28),
+            offset: parseInt(req.query.offset ? req.query.offset : 0),
+            length: length,
+          },
+        });
+      });
+      db.doRelease(connect);
+    });
+  });
+});
+
+productRoute.get('/product-detail/:id', (req, res) => {
+  const productId = req.params.id;
+
+  db.connect().then(async (connect) => {
+    connect.execute(
+      `select pd.*,brands.name as brand_name from product_detail pd left join brands on pd.brand_id = brands.id where pd.id = ${productId}`,
+      {},
+      { resultSet: true },
+      (err, result) => {
+        if (err) {
+          console.error(err.message);
+          res.status(500).send('Error getting data from DB');
+          db.doRelease(connect);
+          return;
+        }
+        result.resultSet.getRow((err, row) => {
+          if (err) throw err;
+          row = Object.fromEntries(
+            Object.entries(row).map(([k, v]) => [k.toLowerCase(), v]),
+            Object.keys(row).forEach((key) => {
+              if (row[key]?.type?.columnTypeName.toLowerCase() === 'nclob') {
+                row[key].getData().then((value) => {
+                  row[key] = value;
+                });
+              }
+            }),
+          );
+          res.json({ data: row });
+          // db.doRelease(connect);
+        }),
+          db.doRelease(connect);
+      },
+    );
+  });
 });
 module.exports = productRoute;
