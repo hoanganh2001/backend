@@ -8,13 +8,12 @@ const productRoute = require('./controllers/product/productController');
 const brandRoute = require('./controllers/brand/brandController');
 const categoryRoute = require('./controllers/category/categoryController');
 const newsRoute = require('./controllers/new/newController');
+const userRoute = require('./controllers/user/userController');
 
 db.createPool();
 const corsOptions = {
-  origin: '*',
+  origin: 'http://localhost:4200',
   credentials: true,
-  methods: ['GET', 'PUT', 'POST', 'DELETE'],
-  allowedHeaders: '*',
   exposedHeaders: '*',
 };
 const app = new express();
@@ -28,6 +27,7 @@ app.use('/api', productRoute);
 app.use('/api', brandRoute);
 app.use('/api', categoryRoute);
 app.use('/api', newsRoute);
+app.use('/api', cors(corsOptions), userRoute);
 
 app.get('/', (req, res) => {
   res.send('Hello World!');
