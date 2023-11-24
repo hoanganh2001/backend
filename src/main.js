@@ -3,6 +3,7 @@ const cors = require('cors');
 
 const db = require('./config/db');
 const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
 
 const productRoute = require('./controllers/product/productController');
 const brandRoute = require('./controllers/brand/brandController');
@@ -22,6 +23,7 @@ const port = 3000;
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 app.use('/api', productRoute);
 app.use('/api', brandRoute);
