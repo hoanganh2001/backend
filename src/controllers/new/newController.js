@@ -8,11 +8,11 @@ oracledb.fetchAsString = [oracledb.CLOB];
 newsRoute.get('/news-lastest', (req, res) => {
   db.connect().then(async (connect) => {
     const sqlQuery = `Select * from news order by create_date OFFSET 0 ROWS FETCH NEXT 5 ROWS ONLY `;
-
     connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        console.error(err.message);
-        res.status(500).send('Error getting data from DB');
+        res
+          .status(500)
+          .json({ message: err.message | 'Error getting data from DB' });
         db.doRelease(connect);
         return;
       }
@@ -41,8 +41,9 @@ newsRoute.get('/news-list', (req, res) => {
     ).rows[0].LENGTH;
     connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        console.error(err.message);
-        res.status(500).send('Error getting data from DB');
+        res
+          .status(500)
+          .json({ message: err.message | 'Error getting data from DB' });
         db.doRelease(connect);
         return;
       }
@@ -66,8 +67,9 @@ newsRoute.get('/new/:id', (req, res) => {
     const sqlQuery = `Select * from news where id = ${newId} `;
     connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        console.error(err.message);
-        res.status(500).send('Error getting data from DB');
+        res
+          .status(500)
+          .json({ message: err.message | 'Error getting data from DB' });
         db.doRelease(connect);
         return;
       }
