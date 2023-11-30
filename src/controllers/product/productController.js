@@ -109,21 +109,20 @@ paramsKey = [
 ];
 
 productRoute.get('/products', (req, res) => {
-  console.log(req);
   db.connect().then(async (connect) => {
     const query =
       `SELECT pd.* FROM product_detail pd ` + getQueryString(req.query);
     const lengthQuery =
       `SELECT count(pd.id) as length FROM product_detail pd ` +
       getQueryString(req.query, true);
-    console.log(query);
     const length = await (
       await connect.execute(lengthQuery, {})
     ).rows[0].LENGTH;
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        console.error(err.message);
-        res.status(500).send('Error getting data from DB');
+        res
+          .status(500)
+          .json({ message: err.message | 'Error getting data from DB' });
         db.doRelease(connect);
         return;
       }
@@ -161,8 +160,9 @@ productRoute.get('/promotional-product', (req, res) => {
     ).rows[0].LENGTH;
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        console.error(err.message);
-        res.status(500).send('Error getting data from DB');
+        res
+          .status(500)
+          .json({ message: err.message | 'Error getting data from DB' });
         db.doRelease(connect);
         return;
       }
@@ -197,8 +197,9 @@ productRoute.get('/product-detail/:id', (req, res) => {
       { resultSet: true },
       (err, result) => {
         if (err) {
-          console.error(err.message);
-          res.status(500).send('Error getting data from DB');
+          res
+            .status(500)
+            .json({ message: err.message | 'Error getting data from DB' });
           db.doRelease(connect);
           return;
         }

@@ -15,7 +15,6 @@ userRoute.post('/login', (req, res) => {
     const sqlQuery = `Select * from user_account where name = '${req.body.username}'`;
     connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        console.error(err.message);
         res.status(500).json({ message: 'Error getting data from DB' });
         db.doRelease(connect);
         return;
@@ -67,11 +66,9 @@ userRoute.post('/sign-up', (req, res) => {
       [req.body.name, req.body.email],
       (err, result) => {
         if (err) {
-          res
-            .status(500)
-            .json({
-              message: { message: err.message | 'Error get data from DB' },
-            });
+          res.status(500).json({
+            message: { message: err.message | 'Error get data from DB' },
+          });
           db.doRelease(connect);
           return;
         }
@@ -88,7 +85,6 @@ userRoute.post('/sign-up', (req, res) => {
           { autoCommit: true },
           (err, result) => {
             if (err) {
-              console.error(err.message);
               res.status(500).json({ message: 'Error saving employee to DB' });
               doRelease(connect);
               return;
@@ -116,7 +112,6 @@ userRoute.post('/sign-up', (req, res) => {
 
 userRoute.get('/my-profile', (req, res) => {
   const session_id = req.cookies.SessionID;
-  console.log(session_id);
   jwt.verify(session_id, config.secret, async (err, decoded) => {
     if (err) {
       // if token has been altered or has expired, return an unauthorized error
@@ -163,7 +158,6 @@ const detailKey = ['name', 'address', 'phone'];
 
 userRoute.post('/update-my-profile', (req, res) => {
   const session_id = req.cookies.SessionID;
-  console.log(session_id);
   jwt.verify(session_id, config.secret, async (err, decoded) => {
     if (err) {
       // if token has been altered or has expired, return an unauthorized error
@@ -172,6 +166,7 @@ userRoute.post('/update-my-profile', (req, res) => {
       });
     }
     const { id } = decoded;
+    let passMessage = '';
     db.connect().then(async (connect) => {
       const checkUser = `SELECT * FROM USER_DETAIL WHERE USER_ID = :id`;
       connect.execute(checkUser, [id], (err, result) => {
@@ -181,6 +176,27 @@ userRoute.post('/update-my-profile', (req, res) => {
             .json({ message: err.message | 'Error getting data from DB' });
           db.doRelease(connect);
           return;
+        }
+        if (req.body.old_password && req.body.new_password) {
+          const changePass = `update user_account set password = '${req.body.new_password}' where id = ${id} and password like '${req.body.old_password}'`;
+          connect.execute(
+            changePass,
+            {},
+            { autoCommit: true },
+            (err, result) => {
+              if (err) {
+                res.status(500).json({
+                  message: err.message | 'Error getting data from DB',
+                });
+                db.doRelease(connect);
+                return;
+              }
+              passMessage =
+                result.rowsAffected === 1
+                  ? 'change pass success!'
+                  : 'Wrong Old pass!';
+            },
+          );
         }
         if (result.rows.length > 0) {
           let info = '';
@@ -192,8 +208,8 @@ userRoute.post('/update-my-profile', (req, res) => {
               }`;
           });
           const updateInfo = `
-          BEGIN
-          update user_detail set ${info} WHERE USER_ID = ${id};
+            BEGIN
+              update user_detail set ${info} WHERE USER_ID = ${id};
               UPDATE USER_ACCOUNT SET EMAIL = '${req.body.email}' WHERE ID = ${id} AND EMAIL NOT LIKE '${req.body.email}';
             END;`;
           connect.execute(
@@ -202,14 +218,16 @@ userRoute.post('/update-my-profile', (req, res) => {
             { autoCommit: true },
             (err, result) => {
               if (err) {
-                console.error(err.message);
                 res
                   .status(500)
                   .json({ message: 'Error saving employee to DB' });
                 db.doRelease(connect);
                 return;
               }
-              res.status(200).json({ message: 'success update info!' });
+              res.status(200).json({
+                message: 'success update info!',
+                password: passMessage,
+              });
               db.doRelease(connect);
               return;
             },
@@ -225,14 +243,17 @@ userRoute.post('/update-my-profile', (req, res) => {
             { autoCommit: true },
             (err, result) => {
               if (err) {
-                console.error(err.message);
                 res
                   .status(500)
                   .json({ message: 'Error saving employee to DB' });
                 db.doRelease(connect);
                 return;
               }
-              res.json({ message: 'success update info!' });
+              console.log(passMessage);
+              res.json({
+                message: 'success update info!',
+                password: passMessage,
+              });
               db.doRelease(connect);
               return;
             },
