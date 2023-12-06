@@ -1,7 +1,8 @@
 const express = require('express');
 const db = require('../../config/db');
 const oracledb = require('oracledb');
-
+const jwt = require('jsonwebtoken');
+const config = require('../../config/auth');
 // const Product = require('../../models/product');
 oracledb.fetchAsString = [oracledb.CLOB];
 
@@ -108,10 +109,29 @@ paramsKey = [
   },
 ];
 
-productRoute.get('/products', (req, res) => {
+productRoute.get('/products', async (req, res) => {
+  const session_id = req.cookies.SessionID;
+  const id = session_id
+    ? await jwt.verify(session_id, config.secret, async (err, decoded) => {
+        if (err) {
+          // if token has been altered or has expired, return an unauthorized error
+          return res.status(401).json({
+            message: err.message | 'This session has expired. Please login',
+          });
+        }
+        return decoded.id;
+      })
+    : null;
   db.connect().then(async (connect) => {
     const query =
-      `SELECT pd.* FROM product_detail pd ` + getQueryString(req.query);
+      `SELECT pd.*${
+        id
+          ? `, 
+      (select count(fp.id) from favorite_product fp where fp.user_id = ${id} and fp.product_id = pd.id)
+      as FAVORITE`
+          : ''
+      } FROM product_detail pd
+      ` + getQueryString(req.query);
     const lengthQuery =
       `SELECT count(pd.id) as length FROM product_detail pd ` +
       getQueryString(req.query, true);
@@ -129,6 +149,7 @@ productRoute.get('/products', (req, res) => {
       result.resultSet.getRows((err, rows) => {
         if (err) throw err;
         rows = rows.map((item) => {
+          item['FAVORITE'] = Boolean(item['FAVORITE']);
           return Object.fromEntries(
             Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
           );
@@ -147,10 +168,28 @@ productRoute.get('/products', (req, res) => {
   });
 });
 
-productRoute.get('/promotional-product', (req, res) => {
+productRoute.get('/promotional-product', async (req, res) => {
+  const session_id = req.cookies.SessionID;
+  const id = session_id
+    ? await jwt.verify(session_id, config.secret, async (err, decoded) => {
+        if (err) {
+          // if token has been altered or has expired, return an unauthorized error
+          return res.status(401).json({
+            message: err.message | 'This session has expired. Please login',
+          });
+        }
+        return decoded.id;
+      })
+    : null;
   db.connect().then(async (connect) => {
     const query =
-      `SELECT * FROM product_detail pd where gift_id is not null or discount is not null ` +
+      `SELECT pd.*,*${
+        id
+          ? `, 
+      (select count(fp.id) from favorite_product fp where fp.user_id = ${id} and fp.product_id = pd.id)
+      as FAVORITE`
+          : ''
+      } FROM product_detail pd where gift_id is not null or discount is not null ` +
       getQueryString(req.query, false, true);
     const lengthQuery =
       `SELECT count(id) as length FROM product_detail pd where gift_id is not null or discount is not null ` +
@@ -221,6 +260,120 @@ productRoute.get('/product-detail/:id', (req, res) => {
           db.doRelease(connect);
       },
     );
+  });
+});
+
+productRoute.post('/product-favorite/:id', async (req, res) => {
+  const productId = req.params.id;
+  const session_id = req.cookies.SessionID;
+  if (!session_id) {
+    return res.status(400).json({
+      message: 'Please login!',
+    });
+  }
+  const id = await jwt.verify(
+    session_id,
+    config.secret,
+    async (err, decoded) => {
+      if (err) {
+        // if token has been altered or has expired, return an unauthorized error
+        return res.status(401).json({
+          message: err.message | 'This session has expired. Please login',
+        });
+      }
+      return decoded.id;
+    },
+  );
+  const query = `
+    declare
+      l_exst number;
+    begin
+      SELECT COUNT(*) INTO l_exst FROM FAVORITE_PRODUCT WHERE USER_ID = ${id} AND PRODUCT_ID = ${productId};
+      if l_exst = 1 
+      then
+        DELETE FROM FAVORITE_PRODUCT WHERE USER_ID = ${id} AND PRODUCT_ID = ${productId};
+        DBMS_OUTPUT.put_line('YES YOU CAN');
+      else
+        INSERT INTO FAVORITE_PRODUCT(USER_ID, PRODUCT_ID) VALUES(${id},${productId});
+      end if;
+    end;
+  `;
+
+  db.connect().then(async (connect) => {
+    connect.execute(query, {}, { autoCommit: true }, (err, result) => {
+      if (err) {
+        res
+          .status(500)
+          .json({ message: err.message | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      console.log(result);
+      const message = result.rowsAffected ? 'success' : 'fail';
+      res.status(200).json({ message: message, isLogIn: !!id });
+      db.doRelease(connect);
+    });
+  });
+});
+
+productRoute.get('/product-favorite', async (req, res) => {
+  const session_id = req.cookies.SessionID;
+  if (!session_id) {
+    return res.status(400).json({
+      message: 'Please login!',
+    });
+  }
+  const id = await jwt.verify(
+    session_id,
+    config.secret,
+    async (err, decoded) => {
+      if (err) {
+        // if token has been altered or has expired, return an unauthorized error
+        return res.status(401).json({
+          message: err.message | 'This session has expired. Please login',
+        });
+      }
+      return decoded.id;
+    },
+  );
+  db.connect().then(async (connect) => {
+    const query =
+      `SELECT pd.*, 1 as FAVORITE FROM FAVORITE_PRODUCT fp inner join product_detail pd on pd.id = fp.product_id WHERE USER_ID = ${id}` +
+      getQueryString(req.query, true);
+    const lengthQuery =
+      `SELECT count(pd.id) as length FROM FAVORITE_PRODUCT pd WHERE USER_ID = ${id}` +
+      getQueryString(req.query, true);
+    const length = await (
+      await connect.execute(lengthQuery, {})
+    ).rows[0].LENGTH;
+    connect.execute(query, {}, { resultSet: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res
+          .status(500)
+          .json({ message: err.message | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      result.resultSet.getRows((err, rows) => {
+        if (err) throw err;
+        rows = rows.map((item) => {
+          item['FAVORITE'] = Boolean(item['FAVORITE']);
+          return Object.fromEntries(
+            Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
+          );
+        });
+        res.json({
+          data: rows,
+          meta: {
+            limit: parseInt(req.query.limit ? req.query.limit : 28),
+            offset: parseInt(req.query.offset ? req.query.offset : 0),
+            length: length,
+          },
+        });
+      });
+      db.doRelease(connect);
+    });
   });
 });
 module.exports = productRoute;
