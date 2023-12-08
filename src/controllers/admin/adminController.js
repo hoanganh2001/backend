@@ -27,9 +27,16 @@ function getQueryString(params, logicOnly, haveDefaultLogic) {
         break;
       case 'sort':
         if (t === 'order_by') {
-          sort += `ORDER BY ${params[t]} `;
+          sort = sort.length = 0
+            ? `ORDER BY ${params[t]} `
+            : `ORDER BY ${params[t]} ` + sort;
         } else {
-          sort += params[t] + ', pd.create_Date';
+          sort +=
+            (params['order_by'] === 'price'
+              ? params[t] === 'desc'
+                ? params[t] + ' nulls last'
+                : params[t] + ' nulls first'
+              : params[t]) + ', pd.create_Date';
         }
         break;
       default:
@@ -47,12 +54,16 @@ function getQueryString(params, logicOnly, haveDefaultLogic) {
 
 function generateWhereLogicQuery(keyDetail, paramsList, param) {
   if (keyDetail?.compare === 'text') {
-    return `pd.id in (select product_detail_id from product_category where ${param.replace(
-      '_name',
-      '_id',
-    )} in (SELECT id FROM ${
-      param.includes('category') ? 'categories' : param.replace('_name', 's')
-    } where name like '%${paramsList[param]}%'))`;
+    return param.includes('category')
+      ? `pd.id in (select product_detail_id from product_category where ${param.replace(
+          '_name',
+          '_id',
+        )} in (SELECT id FROM ${
+          param.includes('category')
+            ? 'categories'
+            : param.replace('_name', 's')
+        } where name like '%${paramsList[param]}%'))`
+      : `LOWER(pd.${param}) like '%${paramsList[param].toLowerCase()}%'`;
   }
   if (keyDetail?.compare === 'number') {
     if (param === 'id')
@@ -84,7 +95,7 @@ paramsKey = [
     compare: 'number',
   },
   {
-    keys: ['category_name'],
+    keys: ['category_name', 'name'],
     type: 'logic',
     compare: 'text',
   },
@@ -105,8 +116,8 @@ paramsKey = [
 adminRoute.get('/products', async (req, res) => {
   db.connect().then(async (connect) => {
     const query =
-      `SELECT pd.*,pc.category_id,c.name as category_name FROM product_detail pd inner join product_category pc on pd.id = pc.product_detail_id inner join categories c on c.id = pc.category_id 
-        ` + getQueryString(req.query);
+      `SELECT DISTINCT pd.id,pd.name,pd.image,pd.price,pc.category_id,c.name as category_name FROM product_detail pd inner join product_category pc on pd.id = pc.product_detail_id inner join categories c on c.id = pc.category_id ` +
+      getQueryString(req.query);
     const lengthQuery =
       `SELECT count(pd.id) as length FROM product_detail pd ` +
       getQueryString(req.query, true);
