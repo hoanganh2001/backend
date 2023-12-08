@@ -12,7 +12,7 @@ oracledb.fetchAsString = [oracledb.CLOB];
 
 userRoute.post('/login', (req, res) => {
   db.connect().then(async (connect) => {
-    const sqlQuery = `Select * from user_account where name = '${req.body.username}'`;
+    const sqlQuery = `Select ua.*, r.name as role from user_account ua left join role r on ua.role_id = r.id where ua.name = '${req.body.username}'`;
     connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
       if (err) {
         res.status(500).json({ message: 'Error getting data from DB' });
@@ -39,9 +39,10 @@ userRoute.post('/login', (req, res) => {
               expiresIn: 30 * 24 * 60 * 60 * 1000, // 24 hours
             });
             res.cookie('SessionID', token, options);
-            res.status(200).json({
+            res.json({
               status: 'success',
               message: 'You have successfully logged in.',
+              role: row.role,
             });
           } else {
             res.status(401).json({
@@ -53,6 +54,7 @@ userRoute.post('/login', (req, res) => {
           res.json({ message: 'fail' });
         }
         db.doRelease(connect);
+        return;
       });
     });
   });
@@ -77,7 +79,7 @@ userRoute.post('/sign-up', (req, res) => {
           db.doRelease(connect);
           return;
         }
-        const sqlQuery = `INSERT INTO USER_ACCOUNT (NAME, EMAIL, PASSWORD,CREATE_DATE) VALUES(:name,:email,:password,:create_date)`;
+        const sqlQuery = `INSERT INTO USER_ACCOUNT (NAME, EMAIL, PASSWORD,CREATE_DATE,ROLE_ID) VALUES(:name,:email,:password,:create_date,2)`;
 
         connect.execute(
           sqlQuery,
@@ -249,7 +251,6 @@ userRoute.post('/update-my-profile', (req, res) => {
                 db.doRelease(connect);
                 return;
               }
-              console.log(passMessage);
               res.json({
                 message: 'success update info!',
                 password: passMessage,
@@ -259,6 +260,49 @@ userRoute.post('/update-my-profile', (req, res) => {
             },
           );
         }
+      });
+    });
+  });
+});
+
+userRoute.get('/account-role', (req, res) => {
+  const session_id = req.cookies.SessionID;
+  if (!session_id) {
+    return res.status(404).json({
+      message: 'Please login',
+    });
+  }
+  jwt.verify(session_id, config.secret, async (err, decoded) => {
+    if (err) {
+      // if token has been altered or has expired, return an unauthorized error
+      return res.status(401).json({
+        message: err.message | 'This session has expired. Please login',
+      });
+    }
+    const { id } = decoded;
+    db.connect().then(async (connect) => {
+      const sqlQuery = `Select r.name as role from user_account ua left join role r on ua.role_id = r.id where ua.id = ${id}`;
+      connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
+        if (err) {
+          console.log(err);
+          res
+            .status(500)
+            .json({ message: err.message | 'Error getting data from DB' });
+          db.doRelease(connect);
+          return;
+        }
+        result.resultSet.getRow((err, row) => {
+          if (err) throw err;
+          row = Object.fromEntries(
+            Object.entries(row).map(([k, v]) => [k.toLowerCase(), v]),
+          );
+          console.log(row);
+          res.json({
+            data: row.role,
+          });
+          db.doRelease(connect);
+          return;
+        });
       });
     });
   });
