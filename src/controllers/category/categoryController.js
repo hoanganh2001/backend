@@ -168,4 +168,45 @@ categoryRoute.get('/categories-list', (req, res) => {
   });
 });
 
+categoryRoute.get('/type-feature-list', (req, res) => {
+  if (!req.query) {
+    res.status(404).json({ message: 'Error getting params' });
+    db.doRelease(connect);
+    return;
+  }
+  const category_id = req.query.category_id;
+  db.connect().then(async (connect) => {
+    const sqlQuery = `
+    DECLARE
+      s1 SYS_REFCURSOR;
+      s2 SYS_REFCURSOR;
+      Begin
+        OPEN s1 FOR Select t.ID,t.NAME from types t left join category_type ct on ct.id = t.category_type_id where ct.category_id = ${category_id};
+        DBMS_SQL.RETURN_RESULT(s1);
+
+        OPEN s2 FOR Select t.ID,t.NAME from features t left join category_feature ct on ct.id = t.category_feature_id where ct.category_id = ${category_id};
+        DBMS_SQL.RETURN_RESULT(s2);
+      End;
+      `;
+    result = await connect.execute(sqlQuery, {});
+    if (result.implicitResults) {
+      datas = result.implicitResults.map((t) => {
+        return t.map((item) => {
+          return Object.fromEntries(
+            Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
+          );
+        });
+      });
+    }
+    res.json({
+      data: {
+        type: datas[0],
+        feature: datas[1],
+      },
+    });
+    db.doRelease(connect);
+  });
+  return;
+});
+
 module.exports = categoryRoute;
