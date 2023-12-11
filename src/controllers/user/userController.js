@@ -284,7 +284,6 @@ userRoute.get('/account-role', (req, res) => {
       const sqlQuery = `Select r.name as role from user_account ua left join role r on ua.role_id = r.id where ua.id = ${id}`;
       connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
         if (err) {
-          console.log(err);
           res
             .status(500)
             .json({ message: err.message | 'Error getting data from DB' });
@@ -296,7 +295,6 @@ userRoute.get('/account-role', (req, res) => {
           row = Object.fromEntries(
             Object.entries(row).map(([k, v]) => [k.toLowerCase(), v]),
           );
-          console.log(row);
           res.json({
             data: row.role,
           });

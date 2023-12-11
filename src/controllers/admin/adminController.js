@@ -164,14 +164,12 @@ adminRoute.delete('/product/:id', async (req, res) => {
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
-        console.log(err);
         res
           .status(500)
           .json({ message: err.message | 'Error getting data from DB' });
         db.doRelease(connect);
         return;
       }
-      console.log(result);
       const message = result.rowsAffected ? 'success' : 'fail';
       res.status(200).json({ message: message });
       db.doRelease(connect);
