@@ -1,6 +1,5 @@
 const express = require('express');
 const db = require('../../config/db');
-const oracledb = require('oracledb');
 const adminRoute = express.Router();
 function getQueryString(params, logicOnly, haveDefaultLogic) {
   let where = '';

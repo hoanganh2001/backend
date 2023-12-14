@@ -113,44 +113,35 @@ userRoute.post('/sign-up', (req, res) => {
 });
 
 userRoute.get('/my-profile', (req, res) => {
-  const session_id = req.cookies.SessionID;
-  jwt.verify(session_id, config.secret, async (err, decoded) => {
-    if (err) {
-      // if token has been altered or has expired, return an unauthorized error
-      return res.status(401).json({
-        message: err.message | 'This session has expired. Please login',
-      });
-    }
-    const { id } = decoded;
-    db.connect().then(async (connect) => {
-      const sqlQuery = `Select ud.*,ua.email as email from user_detail ud left join user_account ua on ud.user_id = ua.id where ud.user_id = ${id}`;
-      connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
-        if (err) {
-          res
-            .status(500)
-            .json({ message: err.message | 'Error getting data from DB' });
-          db.doRelease(connect);
-          return;
-        }
-        result.resultSet.getRow((err, row) => {
-          if (err) throw err;
-          if (!row) {
-            res.status(200).json({
-              message: 'You do not update information! Please update info!',
-            });
-            db.doRelease(connect);
-            return;
-          }
-
-          row = Object.fromEntries(
-            Object.entries(row).map(([k, v]) => [k.toLowerCase(), v]),
-          );
+  const id = req.userId;
+  db.connect().then(async (connect) => {
+    const sqlQuery = `Select ud.*,ua.email as email from user_detail ud left join user_account ua on ud.user_id = ua.id where ud.user_id = ${id}`;
+    connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
+      if (err) {
+        res
+          .status(500)
+          .json({ message: err.message | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      result.resultSet.getRow((err, row) => {
+        if (err) throw err;
+        if (!row) {
           res.status(200).json({
-            data: row,
+            message: 'You do not update information! Please update info!',
           });
           db.doRelease(connect);
           return;
+        }
+
+        row = Object.fromEntries(
+          Object.entries(row).map(([k, v]) => [k.toLowerCase(), v]),
+        );
+        res.status(200).json({
+          data: row,
         });
+        db.doRelease(connect);
+        return;
       });
     });
   });
@@ -159,148 +150,111 @@ userRoute.get('/my-profile', (req, res) => {
 const detailKey = ['name', 'address', 'phone'];
 
 userRoute.post('/update-my-profile', (req, res) => {
-  const session_id = req.cookies.SessionID;
-  jwt.verify(session_id, config.secret, async (err, decoded) => {
-    if (err) {
-      // if token has been altered or has expired, return an unauthorized error
-      return res.status(401).json({
-        message: err.message | 'This session has expired. Please login',
-      });
-    }
-    const { id } = decoded;
-    let passMessage = '';
-    db.connect().then(async (connect) => {
-      const checkUser = `SELECT * FROM USER_DETAIL WHERE USER_ID = :id`;
-      connect.execute(checkUser, [id], (err, result) => {
-        if (err) {
-          res
-            .status(500)
-            .json({ message: err.message | 'Error getting data from DB' });
-          db.doRelease(connect);
-          return;
-        }
-        if (req.body.old_password && req.body.new_password) {
-          const changePass = `update user_account set password = '${req.body.new_password}' where id = ${id} and password like '${req.body.old_password}'`;
-          connect.execute(
-            changePass,
-            {},
-            { autoCommit: true },
-            (err, result) => {
-              if (err) {
-                res.status(500).json({
-                  message: err.message | 'Error getting data from DB',
-                });
-                db.doRelease(connect);
-                return;
-              }
-              passMessage =
-                result.rowsAffected === 1
-                  ? 'change pass success!'
-                  : 'Wrong Old pass!';
-            },
-          );
-        }
-        if (result.rows.length > 0) {
-          let info = '';
-          const body = req.body;
-          Object.keys(body).forEach((t) => {
-            if (detailKey.includes(t))
-              info += `${info.length === 0 ? '' : ', '}${t} = ${
-                body[t] ? "'" + body[t] + "'" : null
-              }`;
-          });
-          const updateInfo = `
+  const id = req.userId;
+  let passMessage = '';
+  db.connect().then(async (connect) => {
+    const checkUser = `SELECT * FROM USER_DETAIL WHERE USER_ID = :id`;
+    connect.execute(checkUser, [id], (err, result) => {
+      if (err) {
+        res
+          .status(500)
+          .json({ message: err.message | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      if (req.body.old_password && req.body.new_password) {
+        const changePass = `update user_account set password = '${req.body.new_password}' where id = ${id} and password like '${req.body.old_password}'`;
+        connect.execute(changePass, {}, { autoCommit: true }, (err, result) => {
+          if (err) {
+            res.status(500).json({
+              message: err.message | 'Error getting data from DB',
+            });
+            db.doRelease(connect);
+            return;
+          }
+          passMessage =
+            result.rowsAffected === 1
+              ? 'change pass success!'
+              : 'Wrong Old pass!';
+        });
+      }
+      if (result.rows.length > 0) {
+        let info = '';
+        const body = req.body;
+        Object.keys(body).forEach((t) => {
+          if (detailKey.includes(t))
+            info += `${info.length === 0 ? '' : ', '}${t} = ${
+              body[t] ? "'" + body[t] + "'" : null
+            }`;
+        });
+        const updateInfo = `
             BEGIN
               update user_detail set ${info} WHERE USER_ID = ${id};
               UPDATE USER_ACCOUNT SET EMAIL = '${req.body.email}' WHERE ID = ${id} AND EMAIL NOT LIKE '${req.body.email}';
             END;`;
-          connect.execute(
-            updateInfo,
-            {},
-            { autoCommit: true },
-            (err, result) => {
-              if (err) {
-                res
-                  .status(500)
-                  .json({ message: 'Error saving employee to DB' });
-                db.doRelease(connect);
-                return;
-              }
-              res.status(200).json({
-                message: 'success update info!',
-                password: passMessage,
-              });
-              db.doRelease(connect);
-              return;
-            },
-          );
-        } else {
-          const insertQuery = `BEGIN
+        connect.execute(updateInfo, {}, { autoCommit: true }, (err, result) => {
+          if (err) {
+            res.status(500).json({ message: 'Error saving employee to DB' });
+            db.doRelease(connect);
+            return;
+          }
+          res.status(200).json({
+            message: 'success update info!',
+            password: passMessage,
+          });
+          db.doRelease(connect);
+          return;
+        });
+      } else {
+        const insertQuery = `BEGIN
               INSERT INTO USER_DETAIL (NAME, ADDRESS, PHONE, USER_ID) VALUES(:name,:address,:phone,:id);
               UPDATE USER_ACCOUNT SET EMAIL = '${req.body.email}' WHERE ID = ${id} AND EMAIL NOT LIKE '${req.body.email}';
             END;`;
-          connect.execute(
-            insertQuery,
-            [req.body.name, req.body.address, req.body.phone, id],
-            { autoCommit: true },
-            (err, result) => {
-              if (err) {
-                res
-                  .status(500)
-                  .json({ message: 'Error saving employee to DB' });
-                db.doRelease(connect);
-                return;
-              }
-              res.json({
-                message: 'success update info!',
-                password: passMessage,
-              });
+        connect.execute(
+          insertQuery,
+          [req.body.name, req.body.address, req.body.phone, id],
+          { autoCommit: true },
+          (err, result) => {
+            if (err) {
+              res.status(500).json({ message: 'Error saving employee to DB' });
               db.doRelease(connect);
               return;
-            },
-          );
-        }
-      });
+            }
+            res.json({
+              message: 'success update info!',
+              password: passMessage,
+            });
+            db.doRelease(connect);
+            return;
+          },
+        );
+      }
     });
   });
 });
 
 userRoute.get('/account-role', (req, res) => {
-  const session_id = req.cookies.SessionID;
-  if (!session_id) {
-    return res.status(404).json({
-      message: 'Please login',
-    });
-  }
-  jwt.verify(session_id, config.secret, async (err, decoded) => {
-    if (err) {
-      // if token has been altered or has expired, return an unauthorized error
-      return res.status(401).json({
-        message: err.message | 'This session has expired. Please login',
-      });
-    }
-    const { id } = decoded;
-    db.connect().then(async (connect) => {
-      const sqlQuery = `Select r.name as role from user_account ua left join role r on ua.role_id = r.id where ua.id = ${id}`;
-      connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
-        if (err) {
-          res
-            .status(500)
-            .json({ message: err.message | 'Error getting data from DB' });
-          db.doRelease(connect);
-          return;
-        }
-        result.resultSet.getRow((err, row) => {
-          if (err) throw err;
-          row = Object.fromEntries(
-            Object.entries(row).map(([k, v]) => [k.toLowerCase(), v]),
-          );
-          res.json({
-            data: row.role,
-          });
-          db.doRelease(connect);
-          return;
+  const id = req.userId;
+  db.connect().then(async (connect) => {
+    const sqlQuery = `Select r.name as role from user_account ua left join role r on ua.role_id = r.id where ua.id = ${id}`;
+    connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
+      if (err) {
+        res
+          .status(500)
+          .json({ message: err.message | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      result.resultSet.getRow((err, row) => {
+        if (err) throw err;
+        row = Object.fromEntries(
+          Object.entries(row).map(([k, v]) => [k.toLowerCase(), v]),
+        );
+        res.json({
+          data: row.role,
         });
+        db.doRelease(connect);
+        return;
       });
     });
   });

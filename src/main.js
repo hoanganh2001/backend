@@ -4,6 +4,7 @@ const cors = require('cors');
 const db = require('./config/db');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
+const authMiddleware = require('./middleware/index');
 
 const productRoute = require('./controllers/product/productController');
 const brandRoute = require('./controllers/brand/brandController');
@@ -31,8 +32,8 @@ app.use('/api', productRoute);
 app.use('/api', brandRoute);
 app.use('/api', categoryRoute);
 app.use('/api', newsRoute);
-app.use('/api/admin', adminRoute);
-app.use('/api', cors(corsOptions), userRoute);
+app.use('/api/admin', [authMiddleware.isAdmin], adminRoute);
+app.use('/api', cors(corsOptions), [authMiddleware.verifyToken], userRoute);
 app.use('/api', cors(corsOptions), orderRoute);
 
 app.get('/', (req, res) => {
