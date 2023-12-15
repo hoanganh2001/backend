@@ -176,4 +176,101 @@ adminRoute.delete('/product/:id', async (req, res) => {
   });
 });
 
+adminRoute.post('/product', async (req, res) => {
+  const detailValue = Object.values(req.body.detail);
+  const typeValue = req.body.type;
+  longgerArr =
+    typeValue.type.length >= typeValue.feature.length ? 'type' : 'feature';
+  let insertCategory = ``;
+  if (typeValue.type || typeValue.feature) {
+    typeValue[longgerArr].forEach((t, i) => {
+      insertCategory = `
+      INSERT INTO PRODUCT_CATEGORY(PRODUCT_DETAIL_ID,CATEGORY_ID,TYPE_ID,FEATURE_ID)
+      VALUES(product_id,${typeValue.category},${
+        longgerArr === 'type'
+          ? t
+          : typeValue['type'][i]
+          ? typeValue['type'][i]
+          : null
+      },${
+        longgerArr === 'feature'
+          ? t
+          : typeValue['feature'][i]
+          ? typeValue['feature'][i]
+          : null
+      });`;
+    });
+  } else {
+    insertCategory = `
+      UPDATE SET(PRODUCT_DETAIL_ID,CATEGORY_ID)
+      VALUES(product_id,${typeValue.category});
+    `;
+  }
+  const query = `
+   DECLARE
+      product_id number;
+    begin
+      INSERT INTO PRODUCT_DETAIL(NAME,PRICE,DISCOUNT,QUANTITY,CREATE_DATE,BRAND_ID,SPECIFICATION,DESCRIPTION)
+      VALUES(:name,:price,:discount,:quantity,:create_date,:brand,:specification,:description)
+      returning id into product_id;
+      ${insertCategory}     
+    end;`;
+  db.connect().then(async (connect) => {
+    connect.execute(query, detailValue, { autoCommit: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res
+          .status(500)
+          .json({ message: err.message | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      res.status(200).json({ message: 'success' });
+      db.doRelease(connect);
+    });
+  });
+});
+
+adminRoute.put('/product/:id', async (req, res) => {
+  const productID = req.params.id;
+  const detailData = req.body.detail;
+  const typeValue = req.body.type;
+  let insertCategory = ``;
+  if (typeValue.type || typeValue.feature) {
+    longgerArr =
+      typeValue.type.length >= typeValue.feature.length ? 'type' : 'feature';
+    typeValue[longgerArr].forEach((t, i) => {
+      insertCategory = `
+    INSERT INTO PRODUCT_CATEGORY(PRODUCT_DETAIL_ID,CATEGORY_ID,TYPE_ID,FEATURE_ID)
+    VALUES(product_id,${typeValue.category},${
+        longgerArr === 'type'
+          ? t
+          : typeValue['type'][i]
+          ? typeValue['type'][i]
+          : null
+      },${
+        longgerArr === 'feature'
+          ? t
+          : typeValue['feature'][i]
+          ? typeValue['feature'][i]
+          : null
+      });`;
+    });
+  } else {
+    insertCategory = `UPDATE SET CATEGORY_ID = ${typeValue.category} WHERE PRODUCT_DETAIL_ID = ${productID};`;
+  }
+  let info = '';
+  Object.keys(detailData).forEach((t) => {
+    info += `${info.length === 0 ? '' : ', '}${t} = ${
+      detailData[t] ? "'" + detailData[t] + "'" : null
+    }`;
+  });
+  const query = `
+  begin
+    UPDATE PRODUCT_DETAIL SET ${info} WHERE ID = ${productID};
+    ${insertCategory}     
+  end;`;
+  console.log(query);
+});
+
 module.exports = adminRoute;
