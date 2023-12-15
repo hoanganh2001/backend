@@ -308,7 +308,6 @@ productRoute.post('/product-favorite/:id', async (req, res) => {
         db.doRelease(connect);
         return;
       }
-      console.log(result);
       const message = result.rowsAffected ? 'success' : 'fail';
       res.status(200).json({ message: message, isLogIn: !!id });
       db.doRelease(connect);
@@ -348,7 +347,6 @@ productRoute.get('/product-favorite', async (req, res) => {
     ).rows[0].LENGTH;
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        console.log(err);
         res
           .status(500)
           .json({ message: err.message | 'Error getting data from DB' });
