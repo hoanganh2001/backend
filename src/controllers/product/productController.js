@@ -292,7 +292,6 @@ productRoute.post('/product-favorite/:id', async (req, res) => {
       if l_exst = 1 
       then
         DELETE FROM FAVORITE_PRODUCT WHERE USER_ID = ${id} AND PRODUCT_ID = ${productId};
-        DBMS_OUTPUT.put_line('YES YOU CAN');
       else
         INSERT INTO FAVORITE_PRODUCT(USER_ID, PRODUCT_ID) VALUES(${id},${productId});
       end if;

@@ -1,6 +1,10 @@
 const express = require('express');
 const db = require('../../config/db');
 const adminRoute = express.Router();
+const uploadFile = require('../../services/uploadGGDr.service');
+const formidable = require('formidable');
+const oracledb = require('oracledb');
+
 function getQueryString(params, logicOnly, haveDefaultLogic) {
   let where = '';
   let page = '';
@@ -112,6 +116,7 @@ paramsKey = [
     type: 'sort',
   },
 ];
+
 adminRoute.get('/products', async (req, res) => {
   db.connect().then(async (connect) => {
     const query =
@@ -177,11 +182,14 @@ adminRoute.delete('/product/:id', async (req, res) => {
 });
 
 adminRoute.post('/product', async (req, res) => {
-  const detailValue = Object.values(req.body.detail);
+  const detailValue = req.body.detail;
+  detailValue['id'] = { type: oracledb.NUMBER, dir: oracledb.BIND_OUT };
   const typeValue = req.body.type;
-  longgerArr =
+  const fileList = req.body.files;
+  const longgerArr =
     typeValue.type.length >= typeValue.feature.length ? 'type' : 'feature';
   let insertCategory = ``;
+
   if (typeValue.type || typeValue.feature) {
     typeValue[longgerArr].forEach((t, i) => {
       insertCategory = `
@@ -202,7 +210,7 @@ adminRoute.post('/product', async (req, res) => {
     });
   } else {
     insertCategory = `
-      UPDATE SET(PRODUCT_DETAIL_ID,CATEGORY_ID)
+    INSERT INTO PRODUCT_CATEGORY(PRODUCT_DETAIL_ID,CATEGORY_ID)
       VALUES(product_id,${typeValue.category});
     `;
   }
@@ -213,8 +221,10 @@ adminRoute.post('/product', async (req, res) => {
       INSERT INTO PRODUCT_DETAIL(NAME,PRICE,DISCOUNT,QUANTITY,CREATE_DATE,BRAND_ID,SPECIFICATION,DESCRIPTION)
       VALUES(:name,:price,:discount,:quantity,:create_date,:brand,:specification,:description)
       returning id into product_id;
+      :id := product_id;
       ${insertCategory}     
     end;`;
+  console.log(query);
   db.connect().then(async (connect) => {
     connect.execute(query, detailValue, { autoCommit: true }, (err, result) => {
       if (err) {
@@ -225,10 +235,12 @@ adminRoute.post('/product', async (req, res) => {
         db.doRelease(connect);
         return;
       }
-      res.status(200).json({ message: 'success' });
+      const id = result.outBinds.id;
+      res.status(200).json({ message: 'success', product_id: id });
       db.doRelease(connect);
     });
   });
+  return;
 });
 
 adminRoute.put('/product/:id', async (req, res) => {
@@ -271,6 +283,46 @@ adminRoute.put('/product/:id', async (req, res) => {
     ${insertCategory}     
   end;`;
   console.log(query);
+});
+
+const FOLDER_ID = '1aHCngO3_VGA3eMQl7Ilo8A9m0hGEb89K';
+
+adminRoute.post('/product/:id/images/:thumbnail', async (req, res) => {
+  const productID = req.params.id;
+  const thumbnail = req.params.thumbnail;
+  const form = new formidable.IncomingForm();
+  try {
+    [fields, files] = await form.parse(req);
+    if (!files) {
+      return res.status.json({ message: 'file upload must at least one' });
+    }
+  } catch (err) {
+    res.writeHead(err.httpCode || 400, { 'Content-Type': 'text/plain' });
+    res.json(String(err.message));
+    return;
+  }
+  const idImages = await uploadFile.upload(files.ufile);
+  let insertQur = '';
+  idImages.forEach((id) => {
+    insertQur += `INSERT INTO IMAGES(FILE_ID, PRODUCT_ID) VALUES ('${id}',${productID});`;
+  });
+  const query = `
+       begin
+         ${insertQur}
+         update product_detail set image = '${idImages[thumbnail]}' where id = ${productID};
+       end;`;
+  db.connect().then(async (connect) => {
+    connect.execute(query, {}, { autoCommit: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      res.status(200).json({ message: 'success' });
+      db.doRelease(connect);
+    });
+  });
 });
 
 module.exports = adminRoute;
