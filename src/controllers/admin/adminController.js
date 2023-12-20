@@ -73,7 +73,7 @@ function generateWhereLogicQuery(keyDetail, paramsList, param) {
       return `pd.id ${
         Array.isArray(paramsList[param])
           ? `in (${paramsList[param]})`
-          : `= ${paramsList[param]}) `
+          : `= ${paramsList[param]}`
       }`;
     return `pd.id in (select product_detail_id from product_category where ${param} in (SELECT id FROM ${
       param.includes('category') ? 'categories' : param.replace('_id', 's')
@@ -120,7 +120,7 @@ paramsKey = [
 adminRoute.get('/products', async (req, res) => {
   db.connect().then(async (connect) => {
     const query =
-      `SELECT DISTINCT pd.id,pd.name,pd.image,pd.price,pc.category_id,c.name as category_name FROM product_detail pd inner join product_category pc on pd.id = pc.product_detail_id inner join categories c on c.id = pc.category_id ` +
+      `SELECT pd.*, img.file_id as thumbnail, pc.category_id,c.name as category_name FROM product_detail pd inner join product_category pc on pd.id = pc.product_detail_id inner join categories c on c.id = pc.category_id inner join images img on img.id = pd.thumbnail ` +
       getQueryString(req.query);
     const lengthQuery =
       `SELECT count(pd.id) as length FROM product_detail pd ` +
@@ -130,6 +130,7 @@ adminRoute.get('/products', async (req, res) => {
     ).rows[0].LENGTH;
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
+        console.log(err);
         res
           .status(500)
           .json({ message: err.message | 'Error getting data from DB' });
@@ -150,6 +151,56 @@ adminRoute.get('/products', async (req, res) => {
             offset: parseInt(req.query.offset ? req.query.offset : 0),
             length: length,
           },
+        });
+      });
+      db.doRelease(connect);
+    });
+  });
+});
+
+adminRoute.get('/product/:id', async (req, res) => {
+  const productID = req.params.id;
+  db.connect().then(async (connect) => {
+    const query =
+      `SELECT pd.*, pct.category_id,pct.type_id, pct.feature_id,img_2.file_id
+      FROM product_detail pd
+      LEFT JOIN (
+          SELECT img.product_id,
+          LISTAGG(img.id||','||img.file_id, ';')  as file_id
+          FROM images img group by img.product_id) img_2 
+      on pd.id = img_2.product_id
+      LEFT JOIN (
+          SELECT pc.product_detail_id, 
+          pc.category_id, 
+          LISTAGG(pc.type_id, ', ')  as type_id,
+          LISTAGG(pc.feature_id, ', ')  as feature_id
+          FROM product_category  pc
+          GROUP BY pc.product_detail_id, pc.category_id) pct
+      ON pd.id = pct.product_detail_id
+      ` + getQueryString(req.params, true);
+    connect.execute(query, {}, { resultSet: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res
+          .status(500)
+          .json({ message: err.message | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      result.resultSet.getRow((err, row) => {
+        if (err) throw err;
+        row = Object.fromEntries(
+          Object.entries(row).map(([k, v]) => [k.toLowerCase(), v]),
+        );
+        const fileIDToArr = row['file_id'].split(';').map((t) =>
+          t.split(',').map((e) => {
+            return isNaN(+e) ? e : +e;
+          }),
+        );
+        row['file_id'] =
+          fileIDToArr.length > 1 ? fileIDToArr : fileIDToArr[0] || [];
+        res.json({
+          data: row,
         });
       });
       db.doRelease(connect);
@@ -303,14 +354,19 @@ adminRoute.post('/product/:id/images/:thumbnail', async (req, res) => {
   }
   const idImages = await uploadFile.upload(files.ufile);
   let insertQur = '';
-  idImages.forEach((id) => {
-    insertQur += `INSERT INTO IMAGES(FILE_ID, PRODUCT_ID) VALUES ('${id}',${productID});`;
+  idImages.forEach((id, i) => {
+    insertQur += `INSERT INTO IMAGES(FILE_ID, PRODUCT_ID) VALUES ('${id}',${productID})${
+      i === thumbnail ? 'returning id into thumbnail_id ' : ''
+    };`;
   });
   const query = `
+       declare 
+          thumbnail_id number;
        begin
          ${insertQur}
-         update product_detail set image = '${idImages[thumbnail]}' where id = ${productID};
+         update product_detail set thumbnail = thumbnail_id where id = ${productID};
        end;`;
+  console.log(query);
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
