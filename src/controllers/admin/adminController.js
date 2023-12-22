@@ -120,7 +120,7 @@ paramsKey = [
 adminRoute.get('/products', async (req, res) => {
   db.connect().then(async (connect) => {
     const query =
-      `SELECT pd.*, img.file_id as thumbnail, pc.category_id,c.name as category_name FROM product_detail pd inner join product_category pc on pd.id = pc.product_detail_id inner join categories c on c.id = pc.category_id inner join images img on img.id = pd.thumbnail ` +
+      `SELECT * FROM product_detail pd left join product_list pl on pd.id= pl.id ` +
       getQueryString(req.query);
     const lengthQuery =
       `SELECT count(pd.id) as length FROM product_detail pd ` +
@@ -130,10 +130,7 @@ adminRoute.get('/products', async (req, res) => {
     ).rows[0].LENGTH;
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        console.log(err);
-        res
-          .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+        res.status(500).json({ message: err | 'Error getting data from DB' });
         db.doRelease(connect);
         return;
       }
@@ -180,10 +177,7 @@ adminRoute.get('/product/:id', async (req, res) => {
       ` + getQueryString(req.params, true);
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        console.log(err);
-        res
-          .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+        res.status(500).json({ message: err | 'Error getting data from DB' });
         db.doRelease(connect);
         return;
       }
@@ -192,13 +186,35 @@ adminRoute.get('/product/:id', async (req, res) => {
         row = Object.fromEntries(
           Object.entries(row).map(([k, v]) => [k.toLowerCase(), v]),
         );
-        const fileIDToArr = row['file_id'].split(';').map((t) =>
-          t.split(',').map((e) => {
-            return isNaN(+e) ? e : +e;
-          }),
-        );
-        row['file_id'] =
-          fileIDToArr.length > 1 ? fileIDToArr : fileIDToArr[0] || [];
+        if (row['file_id']) {
+          const fileIDToArr = row['file_id'].split(';').map((t) =>
+            t.split(',').map((e) => {
+              return isNaN(+e) ? e : +e;
+            }),
+          );
+          row['file_id'] =
+            fileIDToArr.length > 1 ? fileIDToArr : fileIDToArr[0] || [];
+        }
+        if (row['type_id']) {
+          const typeIDToArr = row['type_id'].split(';').map((t) =>
+            t.split(',').map((e) => {
+              return isNaN(+e) ? e : +e;
+            }),
+          );
+          row['type_id'] =
+            typeIDToArr.length > 1 ? typeIDToArr : typeIDToArr[0] || [];
+        }
+        if (row['feature_id']) {
+          const featureIDToArr = row['feature_id'].split(';').map((t) =>
+            t.split(',').map((e) => {
+              return isNaN(+e) ? e : +e;
+            }),
+          );
+          row['feature_id'] =
+            featureIDToArr.length > 1
+              ? featureIDToArr
+              : featureIDToArr[0] || [];
+        }
         res.json({
           data: row,
         });
@@ -219,9 +235,7 @@ adminRoute.delete('/product/:id', async (req, res) => {
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
-        res
-          .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+        res.status(500).json({ message: err | 'Error getting data from DB' });
         db.doRelease(connect);
         return;
       }
@@ -275,14 +289,10 @@ adminRoute.post('/product', async (req, res) => {
       :id := product_id;
       ${insertCategory}     
     end;`;
-  console.log(query);
   db.connect().then(async (connect) => {
     connect.execute(query, detailValue, { autoCommit: true }, (err, result) => {
       if (err) {
-        console.log(err);
-        res
-          .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+        res.status(500).json({ message: err | 'Error getting data from DB' });
         db.doRelease(connect);
         return;
       }
@@ -333,7 +343,8 @@ adminRoute.put('/product/:id', async (req, res) => {
     UPDATE PRODUCT_DETAIL SET ${info} WHERE ID = ${productID};
     ${insertCategory}     
   end;`;
-  console.log(query);
+  res.status(200).json({ message: 'success' });
+  return;
 });
 
 const FOLDER_ID = '1aHCngO3_VGA3eMQl7Ilo8A9m0hGEb89K';
@@ -354,9 +365,13 @@ adminRoute.post('/product/:id/images/:thumbnail', async (req, res) => {
   }
   const idImages = await uploadFile.upload(files.ufile);
   let insertQur = '';
+  let updateThumbnailOnInsert = '';
   idImages.forEach((id, i) => {
-    insertQur += `INSERT INTO IMAGES(FILE_ID, PRODUCT_ID) VALUES ('${id}',${productID})${
-      i === thumbnail ? 'returning id into thumbnail_id ' : ''
+    if (i === +thumbnail)
+      updateThumbnailOnInsert = 'returning id into thumbnail_id ';
+
+    insertQur += `INSERT INTO IMAGES(FILE_ID, PRODUCT_ID) VALUES ('${id}',${productID}) ${
+      updateThumbnailOnInsert !== '' ? updateThumbnailOnInsert : ''
     };`;
   });
   const query = `
@@ -364,19 +379,57 @@ adminRoute.post('/product/:id/images/:thumbnail', async (req, res) => {
           thumbnail_id number;
        begin
          ${insertQur}
-         update product_detail set thumbnail = thumbnail_id where id = ${productID};
+         ${
+           updateThumbnailOnInsert &&
+           `update product_detail set thumbnail = thumbnail_id where id = ${productID};`
+         }
        end;`;
-  console.log(query);
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
-        console.log(err);
         res.status(500).json({ message: err | 'Error getting data from DB' });
         db.doRelease(connect);
         return;
       }
       res.status(200).json({ message: 'success' });
       db.doRelease(connect);
+    });
+  });
+});
+
+adminRoute.put('/product/:id/thumbnail/:thumbnail', async (req, res) => {
+  const productID = req.params.id;
+  const thumbnail = req.params.thumbnail;
+  const form = new formidable.IncomingForm();
+  const query = `update product_detail set thumbnail = ${thumbnail} where id = ${productID}`;
+  db.connect().then(async (connect) => {
+    connect.execute(query, {}, { autoCommit: true }, (err, result) => {
+      if (err) {
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      res.status(200).json({ message: 'success' });
+      db.doRelease(connect);
+    });
+  });
+});
+
+adminRoute.delete('/product/:id/images', async (req, res) => {
+  const ids = req.body['ids'];
+  const productID = req.params['id'];
+  const query = `DELETE FROM IMAGES WHERE PRODUCT_ID = ${productID} AND ID IN (${ids})`;
+  db.connect().then(async (connect) => {
+    connect.execute(query, {}, { autoCommit: true }, (err, result) => {
+      if (err) {
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      const message = result.rowsAffected ? 'success' : 'fail';
+      res.status(200).json({ message: message });
+      db.doRelease(connect);
+      return;
     });
   });
 });
