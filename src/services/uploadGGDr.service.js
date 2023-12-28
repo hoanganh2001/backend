@@ -1,5 +1,6 @@
 const { google } = require('googleapis');
 const fs = require('fs');
+const { resolve } = require('path');
 
 const FOLDER_ID = '1aHCngO3_VGA3eMQl7Ilo8A9m0hGEb89K';
 
@@ -38,5 +39,28 @@ upload = async (fileList) => {
   return ids;
 };
 
-const uploadFile = { upload };
+deleteFile = async (fileList) => {
+  const auth = new google.auth.GoogleAuth({
+    keyFile: 'ggKey.json',
+    scopes: ['https://www.googleapis.com/auth/drive'],
+  });
+  const driveService = google.drive({
+    version: 'v3',
+    auth,
+  });
+  await Promise.all(
+    fileList.map(async (f) => {
+      try {
+        const response = await driveService.files.delete({
+          fileId: f,
+        });
+        resolve(response);
+      } catch (err) {
+        reject(err);
+      }
+    }),
+  );
+};
+
+const uploadFile = { upload, deleteFile };
 module.exports = uploadFile;

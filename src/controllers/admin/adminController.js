@@ -229,6 +229,7 @@ adminRoute.delete('/product/:id', async (req, res) => {
   const query = `
     begin
         DELETE FROM PRODUCT_CATEGORY WHERE PRODUCT_DETAIL_ID = ${productId};
+        DELETE FROM IMAGES WHERE PRODUCT_ID = ${productId};
         DELETE FROM PRODUCT_DETAIL WHERE ID = ${productId};
     end;
   `;
@@ -284,7 +285,7 @@ adminRoute.post('/product', async (req, res) => {
       product_id number;
     begin
       INSERT INTO PRODUCT_DETAIL(NAME,PRICE,DISCOUNT,QUANTITY,CREATE_DATE,BRAND_ID,SPECIFICATION,DESCRIPTION)
-      VALUES(:name,:price,:discount,:quantity,:create_date,:brand,:specification,:description)
+      VALUES(:name,:price,:discount,:quantity,:create_date,:brand_id,:specification,:description)
       returning id into product_id;
       :id := product_id;
       ${insertCategory}     
@@ -314,7 +315,7 @@ adminRoute.put('/product/:id', async (req, res) => {
       typeValue.type.length >= typeValue.feature.length ? 'type' : 'feature';
     typeValue[longgerArr].forEach((t, i) => {
       insertCategory = `
-    INSERT INTO PRODUCT_CATEGORY(PRODUCT_DETAIL_ID,CATEGORY_ID,TYPE_ID,FEATURE_ID)
+      UPDATE PRODUCT_CATEGORY(PRODUCT_DETAIL_ID,CATEGORY_ID,TYPE_ID,FEATURE_ID)
     VALUES(product_id,${typeValue.category},${
         longgerArr === 'type'
           ? t
@@ -330,7 +331,7 @@ adminRoute.put('/product/:id', async (req, res) => {
       });`;
     });
   } else {
-    insertCategory = `UPDATE SET CATEGORY_ID = ${typeValue.category} WHERE PRODUCT_DETAIL_ID = ${productID};`;
+    insertCategory = `UPDATE PRODUCT_CATEGORY SET CATEGORY_ID = ${typeValue.category} WHERE PRODUCT_DETAIL_ID = ${productID};`;
   }
   let info = '';
   Object.keys(detailData).forEach((t) => {
@@ -343,7 +344,17 @@ adminRoute.put('/product/:id', async (req, res) => {
     UPDATE PRODUCT_DETAIL SET ${info} WHERE ID = ${productID};
     ${insertCategory}     
   end;`;
-  res.status(200).json({ message: 'success' });
+  db.connect().then(async (connect) => {
+    connect.execute(query, {}, { autoCommit: true }, (err, result) => {
+      if (err) {
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      res.status(200).json({ message: 'success' });
+      db.doRelease(connect);
+    });
+  });
   return;
 });
 
@@ -400,7 +411,6 @@ adminRoute.post('/product/:id/images/:thumbnail', async (req, res) => {
 adminRoute.put('/product/:id/thumbnail/:thumbnail', async (req, res) => {
   const productID = req.params.id;
   const thumbnail = req.params.thumbnail;
-  const form = new formidable.IncomingForm();
   const query = `update product_detail set thumbnail = ${thumbnail} where id = ${productID}`;
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
@@ -426,10 +436,69 @@ adminRoute.delete('/product/:id/images', async (req, res) => {
         db.doRelease(connect);
         return;
       }
+      uploadFile.deleteFile(ids);
+
       const message = result.rowsAffected ? 'success' : 'fail';
       res.status(200).json({ message: message });
       db.doRelease(connect);
       return;
+    });
+  });
+});
+
+adminRoute.get('/categories', async (req, res) => {
+  db.connect().then(async (connect) => {
+    const query = `select c.id,c.name,LISTAGG(ct.id||','||ct.name, ';') as type , 
+      LISTAGG(cf.id||','||cf.name, ';') as feature
+      from categories c 
+      left join category_type ct on c.id = ct.category_id 
+      left join category_feature cf on c.id = cf.category_id 
+      group by c.id,c.name`;
+    const lengthQuery = `SELECT count(c.id) as length from categories c`;
+    const length = await (
+      await connect.execute(lengthQuery, {})
+    ).rows[0].LENGTH;
+    connect.execute(query, {}, { resultSet: true }, (err, result) => {
+      if (err) {
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      result.resultSet.getRows((err, rows) => {
+        if (err) throw err;
+        rows = rows.map((item) => {
+          item.TYPE = item.TYPE.split(';').map((t) => {
+            const itemSplit = t.split(',').map((e) => {
+              return isNaN(+e) ? e : +e;
+            });
+            return {
+              id: itemSplit[0],
+              name: itemSplit[1],
+            };
+          });
+          item.FEATURE = item.FEATURE.split(';').map((t) => {
+            const itemSplit = t.split(',').map((e) => {
+              return isNaN(+e) ? e : +e;
+            });
+            console.log(t.length);
+            console.log(itemSplit);
+            return {
+              id: itemSplit[0],
+              name: itemSplit[1],
+            };
+          });
+          return Object.fromEntries(
+            Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
+          );
+        });
+        res.json({
+          data: rows,
+          meta: {
+            length: length,
+          },
+        });
+      });
+      db.doRelease(connect);
     });
   });
 });
