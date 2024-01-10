@@ -77,7 +77,7 @@ orderRoute.get('/order', async (req, res) => {
   );
   const query = `
   SELECT o.ID, o.NAME, o.PHONE_NUMBER, o.EMAIL, o.USER_ID, o.ADDRESS, o.NOTE, o.COUPON, o.CREATE_DATE, o.PAYMENT, s.name as STATUS, 
-    (select listagg(od.product_id || ',' || pd.name || ',' || pd.image || ',' || od.quantity || ',' || od.price || ',' || od.discount , ';') within group (order by od.product_id) "product" from ORDERS_DETAIL od left join product_detail pd on od.product_id = pd.id where od.order_id = o.id) as product 
+    (select listagg(od.product_id || ',' || pd.name || ',' || pd.thumbnail || ',' || od.quantity || ',' || od.price || ',' || od.discount , ';') within group (order by od.product_id) "product" from ORDERS_DETAIL od left join product_detail pd on od.product_id = pd.id where od.order_id = o.id) as product 
   FROM ORDERS o
   LEFT JOIN STATUS s ON o.status= s.id
   WHERE o.user_id = ${id}

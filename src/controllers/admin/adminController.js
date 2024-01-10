@@ -5,7 +5,7 @@ const uploadFile = require('../../services/uploadGGDr.service');
 const formidable = require('formidable');
 const oracledb = require('oracledb');
 
-function getQueryString(params, logicOnly, haveDefaultLogic) {
+function getQueryString(params, logicOnly, haveDefaultLogic, sortDFByName) {
   let where = '';
   let page = '';
   let sort = '';
@@ -49,7 +49,7 @@ function getQueryString(params, logicOnly, haveDefaultLogic) {
   if (page.trim().length === 0) {
     page = `FETCH NEXT 28 ROWS ONLY `;
   } else if (sort.trim().length === 0) {
-    sort = `ORDER BY CREATE_DATE DESC`;
+    sort = sortDFByName ? `ORDER BY NAME` : `ORDER BY CREATE_DATE DESC`;
   }
   if (logicOnly) return where;
   return where + sort + ' ' + page;
@@ -448,19 +448,27 @@ adminRoute.delete('/product/:id/images', async (req, res) => {
 
 adminRoute.get('/categories', async (req, res) => {
   db.connect().then(async (connect) => {
-    const query = `select c.id,c.name,LISTAGG(ct.id||','||ct.name, ';') as type , 
+    const query =
+      `select c.id,c.name,LISTAGG(ct.id||','||ct.name, ';') as type , 
       LISTAGG(cf.id||','||cf.name, ';') as feature
       from categories c 
       left join category_type ct on c.id = ct.category_id 
       left join category_feature cf on c.id = cf.category_id 
-      group by c.id,c.name`;
-    const lengthQuery = `SELECT count(c.id) as length from categories c`;
+      group by c.id,c.name
+      ` + getQueryString(req.query, null, null, true);
+    const lengthQuery =
+      `SELECT count(c.id) as length from categories c` +
+      getQueryString(req.query, true);
     const length = await (
       await connect.execute(lengthQuery, {})
     ).rows[0].LENGTH;
+    console.log(query);
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        console.log(err);
+        res
+          .status(500)
+          .json({ message: err.Error | 'Error getting data from DB' });
         db.doRelease(connect);
         return;
       }
@@ -480,8 +488,6 @@ adminRoute.get('/categories', async (req, res) => {
             const itemSplit = t.split(',').map((e) => {
               return isNaN(+e) ? e : +e;
             });
-            console.log(t.length);
-            console.log(itemSplit);
             return {
               id: itemSplit[0],
               name: itemSplit[1],
@@ -494,8 +500,53 @@ adminRoute.get('/categories', async (req, res) => {
         res.json({
           data: rows,
           meta: {
+            limit: parseInt(req.query.limit),
+            offset: parseInt(req.query.offset ? req.query.offset : 0),
             length: length,
           },
+        });
+      });
+      db.doRelease(connect);
+    });
+  });
+});
+
+adminRoute.get('/orders', async (req, res) => {
+  const productID = req.params.id;
+  db.connect().then(async (connect) => {
+    const query =
+      `SELECT o.*,
+      (select listagg ('id-' || od.product_id || ',' || 'name-' ||  pd.name || ',' || 'image-' || pd.thumbnail || ',' || 'quantity-' || od.quantity || ',' || 'price-' || od.price || ',' || 'discount-' || od.discount ,';') within group (order by od.product_id) "product" 
+      from ORDERS_DETAIL od left join product_detail pd on od.product_id = pd.id 
+      where od.order_id = o.id) as product 
+      from orders o
+      ` + getQueryString(req.params, true);
+    connect.execute(query, {}, { resultSet: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      result.resultSet.getRows((err, rows) => {
+        if (err) throw err;
+        rows = rows.map((item) => {
+          item.PRODUCT = item.PRODUCT.split(';').map((t) =>
+            Object.fromEntries(
+              t.split(',').map((e) => {
+                return e.split('-').map((e) => {
+                  return isNaN(+e) ? e : e ? +e : null;
+                });
+              }),
+            ),
+          );
+          return Object.fromEntries(
+            Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
+          );
+        });
+
+        res.json({
+          data: rows,
         });
       });
       db.doRelease(connect);
