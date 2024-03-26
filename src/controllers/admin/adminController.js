@@ -5,7 +5,13 @@ const uploadFile = require('../../services/uploadGGDr.service');
 const formidable = require('formidable');
 const oracledb = require('oracledb');
 
-function getQueryString(params, logicOnly, haveDefaultLogic, sortDFByName) {
+function getQueryString(
+  params,
+  logicOnly,
+  haveDefaultLogic,
+  sortDFByName,
+  table,
+) {
   let where = '';
   let page = '';
   let sort = '';
@@ -31,15 +37,15 @@ function getQueryString(params, logicOnly, haveDefaultLogic, sortDFByName) {
       case 'sort':
         if (t === 'order_by') {
           sort = sort.length = 0
-            ? `ORDER BY ${params[t]} `
-            : `ORDER BY ${params[t]} ` + sort;
+            ? `ORDER BY ${table ? table + '.' : ''}${params[t]} `
+            : `ORDER BY ${table ? table + '.' : ''}${params[t]} ` + sort;
         } else {
           sort +=
             (params['order_by'] === 'price'
               ? params[t] === 'desc'
                 ? params[t] + ' nulls last'
                 : params[t] + ' nulls first'
-              : params[t]) + ', pd.create_Date';
+              : params[t]) + `, ${table ? table + '.' : ''}create_date`;
         }
         break;
       default:
@@ -49,7 +55,9 @@ function getQueryString(params, logicOnly, haveDefaultLogic, sortDFByName) {
   if (page.trim().length === 0) {
     page = `FETCH NEXT 28 ROWS ONLY `;
   } else if (sort.trim().length === 0) {
-    sort = sortDFByName ? `ORDER BY NAME` : `ORDER BY CREATE_DATE DESC`;
+    sort = sortDFByName
+      ? `ORDER BY ${table ? table + '.' : ''}NAME`
+      : `ORDER BY ${table ? table + '.' : ''}CREATE_DATE DESC`;
   }
   if (logicOnly) return where;
   return where + sort + ' ' + page;
@@ -184,7 +192,7 @@ adminRoute.get('/product/:id', async (req, res) => {
       result.resultSet.getRow((err, row) => {
         if (err) throw err;
         row = Object.fromEntries(
-          Object.entries(row).map(([k, v]) => [k.toLowerCase(), v]),
+          Object.entries(row)?.map(([k, v]) => [k.toLowerCase(), v]),
         );
         if (row['file_id']) {
           const fileIDToArr = row['file_id'].split(';').map((t) =>
@@ -251,7 +259,6 @@ adminRoute.post('/product', async (req, res) => {
   const detailValue = req.body.detail;
   detailValue['id'] = { type: oracledb.NUMBER, dir: oracledb.BIND_OUT };
   const typeValue = req.body.type;
-  const fileList = req.body.files;
   const longgerArr =
     typeValue.type.length >= typeValue.feature.length ? 'type' : 'feature';
   let insertCategory = ``;
@@ -358,8 +365,6 @@ adminRoute.put('/product/:id', async (req, res) => {
   return;
 });
 
-const FOLDER_ID = '1aHCngO3_VGA3eMQl7Ilo8A9m0hGEb89K';
-
 adminRoute.post('/product/:id/images/:thumbnail', async (req, res) => {
   const productID = req.params.id;
   const thumbnail = req.params.thumbnail;
@@ -462,7 +467,6 @@ adminRoute.get('/categories', async (req, res) => {
     const length = await (
       await connect.execute(lengthQuery, {})
     ).rows[0].LENGTH;
-    console.log(query);
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
         console.log(err);
@@ -512,15 +516,20 @@ adminRoute.get('/categories', async (req, res) => {
 });
 
 adminRoute.get('/orders', async (req, res) => {
-  const productID = req.params.id;
   db.connect().then(async (connect) => {
     const query =
-      `SELECT o.*,
-      (select listagg ('id-' || od.product_id || ',' || 'name-' ||  pd.name || ',' || 'image-' || pd.thumbnail || ',' || 'quantity-' || od.quantity || ',' || 'price-' || od.price || ',' || 'discount-' || od.discount ,';') within group (order by od.product_id) "product" 
-      from ORDERS_DETAIL od left join product_detail pd on od.product_id = pd.id 
+      `SELECT o.*, s.name as status_name,
+      (select listagg ('id|' || od.product_id || ',' || 'name|' ||  pd.name || ',' || 'image|' || im.file_id || ',' || 'quantity|' || od.quantity || ',' || 'price|' || od.price || ',' || 'discount|' || od.discount ,';') within group (order by od.product_id) "product" 
+      from ORDERS_DETAIL od left join product_detail pd on od.product_id = pd.id left join images im on pd.thumbnail = im.id
       where od.order_id = o.id) as product 
-      from orders o
-      ` + getQueryString(req.params, true);
+      from orders o left join status s on o.status = s.id
+      ` + getQueryString(req.query);
+    const lengthQuery =
+      `SELECT count(o.id) as length FROM orders o ` +
+      getQueryString(req.query, true);
+    const length = await (
+      await connect.execute(lengthQuery, {})
+    ).rows[0].LENGTH;
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
         console.log(err);
@@ -534,8 +543,8 @@ adminRoute.get('/orders', async (req, res) => {
           item.PRODUCT = item.PRODUCT.split(';').map((t) =>
             Object.fromEntries(
               t.split(',').map((e) => {
-                return e.split('-').map((e) => {
-                  return isNaN(+e) ? e : e ? +e : null;
+                return e.split('|').map((i) => {
+                  return isNaN(+i) ? i : i ? +i : null;
                 });
               }),
             ),
@@ -547,11 +556,303 @@ adminRoute.get('/orders', async (req, res) => {
 
         res.json({
           data: rows,
+          meta: {
+            limit: parseInt(req.query.limit ? req.query.limit : 28),
+            offset: parseInt(req.query.offset ? req.query.offset : 0),
+            length: length,
+          },
         });
       });
       db.doRelease(connect);
     });
   });
+});
+
+adminRoute.put('/order/:id/onway', async (req, res) => {
+  const orderID = req.params.id;
+  const update_date = req.body.params['date'];
+  if (!orderID) {
+    res.status(404).json({ message: 'Do not have order!' });
+    return;
+  }
+  db.connect().then(async (connect) => {
+    const query = `select status from orders where id = ${orderID}`;
+    const status = await connect.execute(query, {});
+    if (status.rows[0].STATUS === 1) {
+      const updateQuery = `update orders set status = 2, update_date = '${update_date}' where id = ${orderID}`;
+      connect.execute(updateQuery, {}, { autoCommit: true }, (err, result) => {
+        if (err) {
+          res.status(500).json({ message: err | 'Error getting data from DB' });
+          db.doRelease(connect);
+          return;
+        }
+        res.status(200).json({ message: 'success' });
+        db.doRelease(connect);
+      });
+    } else {
+      res.status(500).json({ message: 'Status is not satisfy!' });
+      db.doRelease(connect);
+      return;
+    }
+  });
+});
+
+adminRoute.put('/order/:id/success', async (req, res) => {
+  const orderID = req.params.id;
+  const update_date = req.body.params['date'];
+  if (!orderID) {
+    res.status(404).json({ message: 'Do not have order!' });
+    return;
+  }
+  db.connect().then(async (connect) => {
+    const query = `select status from orders where id = ${orderID}`;
+    const status = await connect.execute(query, {});
+    if (status.rows[0].STATUS === 2) {
+      const updateQuery = `update orders set status = 3, update_date = '${update_date}' where id = ${orderID}`;
+      connect.execute(updateQuery, {}, { autoCommit: true }, (err, result) => {
+        if (err) {
+          res.status(500).json({ message: err | 'Error getting data from DB' });
+          db.doRelease(connect);
+          return;
+        }
+        res.status(200).json({ message: 'success' });
+        db.doRelease(connect);
+      });
+    } else {
+      res.status(500).json({ message: 'Status is not satisfy!' });
+      db.doRelease(connect);
+      return;
+    }
+  });
+});
+
+adminRoute.put('/order/:id/cancel', async (req, res) => {
+  const orderID = req.params.id;
+  const update_date = req.body.params['date'];
+  if (!orderID) {
+    res.status(404).json({ message: 'Do not have order!' });
+    return;
+  }
+  db.connect().then(async (connect) => {
+    const query = `select status from orders where id = ${orderID}`;
+    const status = await connect.execute(query, {});
+    if (status.rows[0].STATUS !== 3) {
+      const updateQuery = `update orders set status = 4, update_date = '${update_date}' where id = ${orderID}`;
+      connect.execute(updateQuery, {}, { autoCommit: true }, (err, result) => {
+        if (err) {
+          res.status(500).json({ message: err | 'Error getting data from DB' });
+          db.doRelease(connect);
+          return;
+        }
+        res.status(200).json({ message: 'success' });
+        db.doRelease(connect);
+      });
+    } else {
+      res.status(500).json({ message: 'Status is not satisfy!' });
+      db.doRelease(connect);
+      return;
+    }
+  });
+});
+
+adminRoute.delete('/order/:id', async (req, res) => {
+  const orderID = req.params.id;
+  if (!orderID) {
+    res.status(404).json({ message: 'Do not have order!' });
+    return;
+  }
+
+  db.connect().then(async (connect) => {
+    const query = `select status from orders where id = ${orderID}`;
+    const status = await connect.execute(query, {});
+    if (status.rows[0].STATUS === 4) {
+      const delQuery = `
+      Begin
+        DELETE FROM orders_detail WHERE order_id = ${+orderID};
+        DELETE FROM orders WHERE id = ${+orderID};
+      End;`;
+      connect.execute(delQuery, {}, { autoCommit: true }, (err, result) => {
+        if (err) {
+          console.log(err);
+          res.status(500).json({ message: 'Error getting data from DB' });
+          db.doRelease(connect);
+          return;
+        }
+        const message = result.rowsAffected ? 'success' : 'fail';
+        res.status(200).json({ message: message });
+        db.doRelease(connect);
+        return;
+      });
+    } else {
+      res.status(500).json({ message: 'Cannot delete this order!' });
+      db.doRelease(connect);
+      return;
+    }
+  });
+});
+
+adminRoute.get('/news', async (req, res) => {
+  db.connect().then(async (connect) => {
+    const query =
+      `select n.*, im.file_id as thumbnail_url, ua.name as author from NEWS n left join images im on n.thumbnail_id = im.id left join user_account ua on n.author_id = ua.id
+    ` + getQueryString(req.query, undefined, undefined, undefined, 'n');
+    const lengthQuery =
+      `SELECT count(n.id) as length FROM news n ` +
+      getQueryString(req.query, true);
+    const length = await (
+      await connect.execute(lengthQuery, {})
+    ).rows[0].LENGTH;
+    connect.execute(query, {}, { resultSet: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      result.resultSet.getRows((err, rows) => {
+        if (err) throw err;
+        rows = rows.map((item) => {
+          return Object.fromEntries(
+            Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
+          );
+        });
+        res.json({
+          data: rows,
+          meta: {
+            limit: parseInt(req.query.limit ? req.query.limit : 28),
+            offset: parseInt(req.query.offset ? req.query.offset : 0),
+            length: length,
+          },
+        });
+      });
+      db.doRelease(connect);
+    });
+  });
+});
+
+adminRoute.delete('/new/:id', async (req, res) => {
+  const newId = req.params.id;
+  if (!newId) {
+    res.status(404).json({ message: 'Do not have new!' });
+    return;
+  }
+  const query = `
+    begin
+        DELETE FROM news WHERE id = ${newId};
+    end;
+  `;
+  db.connect().then(async (connect) => {
+    connect.execute(query, {}, { autoCommit: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      res.status(200).json({ message: 'success' });
+      db.doRelease(connect);
+    });
+  });
+});
+
+adminRoute.post('/new', async (req, res) => {
+  const newValue = req.body;
+  newValue['id'] = { type: oracledb.NUMBER, dir: oracledb.BIND_OUT };
+  const query = `
+   DECLARE
+      new_id number;
+    begin
+      INSERT INTO news(NAME,AUTHOR_ID,CONTENT,CREATE_DATE,UPDATE_DATE)
+      VALUES(:name,:author_id,:description,:create_date,:update_date)
+      returning id into new_id;
+      :id := new_id;
+    end;`;
+  db.connect().then(async (connect) => {
+    connect.execute(query, newValue, { autoCommit: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      const id = result.outBinds.id;
+      console.log(result);
+      res.status(200).json({ message: 'success', new_id: id });
+      db.doRelease(connect);
+    });
+  });
+  return;
+});
+
+adminRoute.post('/new/:id/images', async (req, res) => {
+  const newID = req.params.id;
+  const form = new formidable.IncomingForm();
+  try {
+    [fields, files] = await form.parse(req);
+    if (!files) {
+      return res.status.json({ message: 'file upload must at least one' });
+    }
+  } catch (err) {
+    res.writeHead(err.httpCode || 400, { 'Content-Type': 'text/plain' });
+    res.json(String(err.message));
+    return;
+  }
+  const idImages = await uploadFile.upload(files.ufile);
+  const query = `
+       declare
+        img_id number;
+       begin
+         INSERT INTO IMAGES(FILE_ID, NEW_ID) VALUES ('${idImages[0]}',${newID})
+         returning id into img_id;
+          update news set thumbnail_id = img_id where id = ${newID};
+       end;`;
+  db.connect().then(async (connect) => {
+    connect.execute(query, {}, { autoCommit: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      res.status(200).json({ message: 'success' });
+      db.doRelease(connect);
+    });
+  });
+});
+
+adminRoute.put('/new/:id', async (req, res) => {
+  const newID = req.params.id;
+  const newValue = req.body;
+  let info = '';
+  Object.keys(newValue).forEach((t) => {
+    info += `${info.length === 0 ? '' : ', '}${t} = ${
+      newValue[t]
+        ? isNaN(+newValue)
+          ? "'" + newValue[t] + "'"
+          : newValue[t]
+        : null
+    }`;
+  });
+  console.log(info);
+  const query = `
+  begin
+    UPDATE news SET ${info} WHERE ID = ${newID};
+  end;`;
+  console.log(query);
+
+  db.connect().then(async (connect) => {
+    connect.execute(query, {}, { autoCommit: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      res.status(200).json({ message: 'success' });
+      db.doRelease(connect);
+    });
+  });
+  return;
 });
 
 module.exports = adminRoute;
