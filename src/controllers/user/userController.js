@@ -6,6 +6,8 @@ const config = require('../../config/auth');
 const authMiddleware = require('../../middleware/index');
 
 var jwt = require('jsonwebtoken');
+const speakeasy = require('speakeasy');
+const sendEmail = require('../../utils/sendEmails');
 
 var bcrypt = require('bcryptjs');
 const oracledb = require('oracledb');
@@ -41,6 +43,10 @@ userRoute.post('/login', (req, res) => {
               expiresIn: 30 * 24 * 60 * 60 * 1000, // 24 hours
             });
             res.cookie('SessionID', token, options);
+            const updateQuery = `update user_account set last_signin = '${new Date().toISOString()}' where id = ${
+              row.id
+            }`;
+            connect.execute(updateQuery, {}, { autoCommit: true });
             res.json({
               status: 'success',
               message: 'You have successfully logged in.',
@@ -277,6 +283,153 @@ userRoute.get('/account-role', [authMiddleware.verifyToken], (req, res) => {
         return;
       });
     });
+  });
+});
+
+userRoute.post('/sendOTP', async (req, res) => {
+  try {
+    const { email } = req.body;
+    // Generate a secret key with a length
+    // of 20 characters
+    db.connect().then(async (connect) => {
+      const query = `select id from user_account where email = '${email}'`;
+      const result = await connect.execute(query, {});
+      const id = result.rows[0].ID;
+      if (!id) {
+        res.status(404).json({ message: 'Email is not exist!', type: 'fail' });
+        db.doRelease(connect);
+        return;
+      }
+      const secret = speakeasy.generateSecret({ length: 6 });
+
+      // Generate a TOTP code using the secret key
+      const otp = speakeasy.totp({
+        // Use the Base32 encoding of the secret key
+        secret: secret.base32,
+
+        // Tell Speakeasy to use the Base32
+        // encoding format for the secret key
+        encoding: 'base32',
+      });
+      const updateQuery = `update user_account set otp = '${otp}' where id = ${id}`;
+      const updateResult = await connect.execute(
+        updateQuery,
+        {},
+        { autoCommit: true },
+      );
+      if (updateResult.rowsAffected !== 1) {
+        res
+          .status(500)
+          .json({ success: false, message: 'Internal server error' });
+        db.doRelease(connect);
+        return;
+      }
+
+      // Send OTP via email
+      await sendEmail({
+        to: email,
+        subject: 'Reset Password',
+        message: `<p>Your OTP is: <strong>${otp}</strong></p><p>Your Password will expired in 1 minute</p>`,
+      }).catch((err) => {
+        throw err;
+      });
+      res.status(200).json({ success: true, message: 'OTP sent successfully' });
+
+      setTimeout(async () => {
+        const updateQuery = `update user_account set otp = null where id = ${verifyOTP.rows[0].ID}`;
+        const updateResult = await connect.execute(
+          updateQuery,
+          {},
+          { autoCommit: true },
+        );
+        if (updateResult.rowsAffected !== 1) {
+          res
+            .status(500)
+            .json({ success: false, message: 'Internal server error' });
+          db.doRelease(connect);
+          return;
+        }
+      }, 60000);
+      db.doRelease(connect);
+      return;
+    });
+  } catch (error) {
+    console.error('Error sending OTP:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+    db.doRelease(connect);
+  }
+});
+
+userRoute.post('/verifyOTP', (req, res) => {
+  const { email, otp } = req.body;
+  db.connect().then(async (connect) => {
+    try {
+      const sqlQuery = `Select id,otp from user_account where email = '${email}'`;
+      const verifyOTP = await connect.execute(sqlQuery, {});
+      if (otp !== verifyOTP.rows[0].OTP) {
+        res.status(500).json({ message: 'Wrong otp!' });
+        db.doRelease(connect);
+        return;
+      }
+      const updateQuery = `update user_account set otp = null where id = ${verifyOTP.rows[0].ID}`;
+      const updateResult = await connect.execute(
+        updateQuery,
+        {},
+        { autoCommit: true },
+      );
+      if (updateResult.rowsAffected !== 1) {
+        res
+          .status(500)
+          .json({ success: false, message: 'Internal server error' });
+        db.doRelease(connect);
+        return;
+      }
+      res.status(200).json({
+        success: true,
+        message: 'OTP verify successfully',
+        id: verifyOTP.rows[0].ID,
+      });
+      db.doRelease(connect);
+      return;
+    } catch (error) {
+      console.error('Error sending OTP:', error);
+      res
+        .status(500)
+        .json({ success: false, message: 'Internal server error' });
+      db.doRelease(connect);
+      return;
+    }
+  });
+});
+
+userRoute.put('/reset-password', (req, res) => {
+  const { id, password } = req.body;
+  console.log(req);
+  db.connect().then(async (connect) => {
+    try {
+      const updateQuery = `update user_account set password = ${password} where id = '${id}'`;
+      const updateResult = await connect.execute(updateQuery, {});
+      if (updateResult.rowsAffected !== 1) {
+        res
+          .status(500)
+          .json({ success: false, message: 'Internal server error' });
+        db.doRelease(connect);
+        return;
+      }
+      res.status(200).json({
+        success: true,
+        message: 'Reset Password successful!',
+      });
+      db.doRelease(connect);
+      return;
+    } catch (error) {
+      console.error('Error sending OTP:', error);
+      res
+        .status(500)
+        .json({ success: false, message: 'Internal server error' });
+      db.doRelease(connect);
+      return;
+    }
   });
 });
 

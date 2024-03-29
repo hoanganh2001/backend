@@ -7,7 +7,7 @@ const oracledb = require('oracledb');
 oracledb.fetchAsString = [oracledb.CLOB];
 newsRoute.get('/news-lastest', (req, res) => {
   db.connect().then(async (connect) => {
-    const sqlQuery = `Select * from news order by create_date OFFSET 0 ROWS FETCH NEXT 5 ROWS ONLY `;
+    const sqlQuery = `Select n.*, im.file_id as image from news n left join images im on n.thumbnail_id = im.id order by create_date OFFSET 0 ROWS FETCH NEXT 5 ROWS ONLY `;
     connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
       if (err) {
         res
@@ -32,9 +32,10 @@ newsRoute.get('/news-lastest', (req, res) => {
 
 newsRoute.get('/news-list', (req, res) => {
   db.connect().then(async (connect) => {
-    const sqlQuery = `Select * from news order by create_date OFFSET ${
+    const sqlQuery = `Select n.*, im.file_id as image from news n left join images im on n.thumbnail_id = im.id order by create_date OFFSET ${
       req.query.offset + 5
     } ROWS FETCH NEXT ${req.query.limit} ROWS ONLY `;
+    console.log(sqlQuery);
     const lengthQuery = `SELECT count(id) as length FROM news`;
     const length = await (
       await connect.execute(lengthQuery, {})
@@ -64,7 +65,7 @@ newsRoute.get('/news-list', (req, res) => {
 newsRoute.get('/new/:id', (req, res) => {
   const newId = req.params.id;
   db.connect().then(async (connect) => {
-    const sqlQuery = `Select * from news where id = ${newId} `;
+    const sqlQuery = `Select n.*, im.file_id as image from news n left join images im on n.thumbnail_id = im.id where n.id = ${newId} `;
     connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
       if (err) {
         res

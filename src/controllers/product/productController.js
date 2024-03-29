@@ -130,7 +130,7 @@ productRoute.get('/products', async (req, res) => {
       (select count(fp.id) from favorite_product fp where fp.user_id = ${id} and fp.product_id = pd.id)
       as FAVORITE`
           : ''
-      } FROM product_detail pd
+      }, im.file_id as thumbnail_url FROM product_detail pd left join images im on pd.thumbnail = im.id
       ` + getQueryString(req.query);
     const lengthQuery =
       `SELECT count(pd.id) as length FROM product_detail pd ` +
@@ -183,14 +183,16 @@ productRoute.get('/promotional-product', async (req, res) => {
     : null;
   db.connect().then(async (connect) => {
     const query =
-      `SELECT pd.*,*${
+      `SELECT pd.*${
         id
           ? `, 
       (select count(fp.id) from favorite_product fp where fp.user_id = ${id} and fp.product_id = pd.id)
       as FAVORITE`
           : ''
-      } FROM product_detail pd where gift_id is not null or discount is not null ` +
+      } , im.file_id as thumbnail_url FROM product_detail pd left join images im on pd.thumbnail = im.id where gift_id is not null or discount is not null ` +
       getQueryString(req.query, false, true);
+    console.log(query);
+
     const lengthQuery =
       `SELECT count(id) as length FROM product_detail pd where gift_id is not null or discount is not null ` +
       getQueryString(req.query, true, true);
@@ -199,6 +201,7 @@ productRoute.get('/promotional-product', async (req, res) => {
     ).rows[0].LENGTH;
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
+        console.log(err);
         res
           .status(500)
           .json({ message: err.message | 'Error getting data from DB' });

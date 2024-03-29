@@ -76,12 +76,13 @@ orderRoute.get('/order', async (req, res) => {
     },
   );
   const query = `
-  SELECT o.ID, o.NAME, o.PHONE_NUMBER, o.EMAIL, o.USER_ID, o.ADDRESS, o.NOTE, o.COUPON, o.CREATE_DATE, o.PAYMENT, s.name as STATUS, 
-    (select listagg(od.product_id || ',' || pd.name || ',' || pd.thumbnail || ',' || od.quantity || ',' || od.price || ',' || od.discount , ';') within group (order by od.product_id) "product" from ORDERS_DETAIL od left join product_detail pd on od.product_id = pd.id where od.order_id = o.id) as product 
+  SELECT o.ID, o.NAME, o.PHONE_NUMBER, o.EMAIL, o.USER_ID, o.ADDRESS, o.NOTE, o.COUPON, o.CREATE_DATE, o.UPDATE_DATE, o.PAYMENT, s.name as STATUS, 
+  (select listagg(od.product_id || '--' || pd.name || '--' || im.file_id || '--' || od.quantity || '--' || od.price || '--' || od.discount , ';') within group (order by od.product_id) "product" from ORDERS_DETAIL od left join product_detail pd on od.product_id = pd.id LEFT JOIN images im ON pd.thumbnail= im.id where od.order_id = o.id) as product 
   FROM ORDERS o
   LEFT JOIN STATUS s ON o.status= s.id
   WHERE o.user_id = ${id}
   ORDER BY o.CREATE_DATE desc`;
+  console.log(query);
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
@@ -93,16 +94,19 @@ orderRoute.get('/order', async (req, res) => {
       }
       result.resultSet.getRows((err, rows) => {
         if (err) throw err;
+        console.log(rows);
         rows = rows.map((item) => {
           item.PRODUCT = item.PRODUCT.split(';').map((t) =>
-            t.split(',').map((e) => {
-              return isNaN(+e) ? e : +e;
+            t.split('--').map((e) => {
+              return isNaN(e) ? e : +e;
             }),
           );
           return Object.fromEntries(
             Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
           );
         });
+        console.log(rows);
+
         res.json({
           data: rows,
         });
@@ -137,10 +141,17 @@ orderRoute.post('/order/cancel', async (req, res) => {
       return decoded.id;
     },
   );
-  const query = `
-  UPDATE ORDERS SET STATUS = 4
-  WHERE user_id = ${id} AND id = ${req.body.id}`;
   db.connect().then(async (connect) => {
+    const queryCheckStatus = `select status from orders where id = ${req.body.id}`;
+    const status = await connect.execute(queryCheckStatus, {});
+    if (status.rows[0].STATUS === 3 || status.rows[0].STATUS === 4) {
+      res.status(400).json({ message: 'Status is not satisfy!' });
+      db.doRelease(connect);
+      return;
+    }
+    const query = `
+    UPDATE ORDERS SET STATUS = 4, note = '${req.body.message}', update_date = '${req.body.date}'
+    WHERE user_id = ${id} AND id = ${req.body.id}`;
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
         res
