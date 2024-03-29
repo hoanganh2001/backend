@@ -125,6 +125,7 @@ paramsKey = [
   },
 ];
 
+// api for product management
 adminRoute.get('/products', async (req, res) => {
   db.connect().then(async (connect) => {
     const query =
@@ -451,6 +452,7 @@ adminRoute.delete('/product/:id/images', async (req, res) => {
   });
 });
 
+// api for categories management
 adminRoute.get('/categories', async (req, res) => {
   db.connect().then(async (connect) => {
     const query =
@@ -515,6 +517,7 @@ adminRoute.get('/categories', async (req, res) => {
   });
 });
 
+// api for orders management
 adminRoute.get('/orders', async (req, res) => {
   db.connect().then(async (connect) => {
     const query =
@@ -636,7 +639,7 @@ adminRoute.put('/order/:id/cancel', async (req, res) => {
   db.connect().then(async (connect) => {
     const query = `select status from orders where id = ${orderID}`;
     const status = await connect.execute(query, {});
-    if (status.rows[0].STATUS !== 3) {
+    if (status.rows[0].STATUS !== 3 || status.rows[0].STATUS !== 4) {
       const updateQuery = `update orders set status = 4, update_date = '${update_date}' where id = ${orderID}`;
       connect.execute(updateQuery, {}, { autoCommit: true }, (err, result) => {
         if (err) {
@@ -648,7 +651,7 @@ adminRoute.put('/order/:id/cancel', async (req, res) => {
         db.doRelease(connect);
       });
     } else {
-      res.status(500).json({ message: 'Status is not satisfy!' });
+      res.status(200).json({ message: 'Status is not satisfy!' });
       db.doRelease(connect);
       return;
     }
@@ -691,6 +694,7 @@ adminRoute.delete('/order/:id', async (req, res) => {
   });
 });
 
+// api for news management
 adminRoute.get('/news', async (req, res) => {
   db.connect().then(async (connect) => {
     const query =
@@ -763,7 +767,7 @@ adminRoute.post('/new', async (req, res) => {
       new_id number;
     begin
       INSERT INTO news(NAME,AUTHOR_ID,CONTENT,CREATE_DATE,UPDATE_DATE)
-      VALUES(:name,:author_id,:description,:create_date,:update_date)
+      VALUES(:name,:author_id,:content,:create_date,:update_date)
       returning id into new_id;
       :id := new_id;
     end;`;
@@ -855,4 +859,153 @@ adminRoute.put('/new/:id', async (req, res) => {
   return;
 });
 
+// api for user management
+adminRoute.get('/users', async (req, res) => {
+  db.connect().then(async (connect) => {
+    const query =
+      `select ua.*,r.name as role_name from user_account ua left join role r on ua.role_id = r.id
+      ` + getQueryString(req.query, null, null, null, 'ua');
+    const lengthQuery =
+      `SELECT count(id) as length FROM user_account ` +
+      getQueryString(req.query, true);
+    const length = await (
+      await connect.execute(lengthQuery, {})
+    ).rows[0].LENGTH;
+    connect.execute(query, {}, { resultSet: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      result.resultSet.getRows((err, rows) => {
+        if (err) throw err;
+        rows = rows.map((item) => {
+          delete item['PASSWORD'];
+          return Object.fromEntries(
+            Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
+          );
+        });
+
+        res.json({
+          data: rows,
+          meta: {
+            limit: parseInt(req.query.limit ? req.query.limit : 28),
+            offset: parseInt(req.query.offset ? req.query.offset : 0),
+            length: length,
+          },
+        });
+      });
+      db.doRelease(connect);
+    });
+  });
+});
+
+adminRoute.post('/user', async (req, res) => {
+  const userData = req.body;
+  userData['id'] = { type: oracledb.NUMBER, dir: oracledb.BIND_OUT };
+  const query = `
+   DECLARE
+      user_id number;
+    begin
+      INSERT INTO user_account(NAME,PASSWORD,EMAIL,PHONE,CREATE_DATE,ADDRESS,ROLE_ID,STATUS)
+      VALUES(:name,:password,:email,:phone,:create_date,:address,:role_id,1)
+      returning id into user_id;
+      :id := user_id;
+    end;`;
+  db.connect().then(async (connect) => {
+    connect.execute(query, userData, { autoCommit: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      const id = result.outBinds.id;
+      console.log(result);
+      res.status(200).json({ message: 'success' });
+      db.doRelease(connect);
+    });
+  });
+  return;
+});
+
+adminRoute.put('/user/:id', async (req, res) => {
+  const userID = req.params.id;
+  const userValue = req.body;
+  let info = '';
+  Object.keys(userValue).forEach((t) => {
+    info += `${info.length === 0 ? '' : ', '}${t} = ${
+      userValue[t]
+        ? isNaN(+userValue)
+          ? "'" + userValue[t] + "'"
+          : userValue[t]
+        : null
+    }`;
+  });
+  console.log(info);
+  const query = `
+  begin
+    UPDATE user_account SET ${info} WHERE ID = ${userID};
+  end;`;
+  console.log(query);
+
+  db.connect().then(async (connect) => {
+    connect.execute(query, {}, { autoCommit: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      res.status(200).json({ message: 'success' });
+      db.doRelease(connect);
+    });
+  });
+  return;
+});
+
+adminRoute.put('/user/status/:id', async (req, res) => {
+  const userID = req.params.id;
+  const status = req.body.status;
+  const query = `
+  begin
+    UPDATE user_account SET status = ${status} WHERE ID = ${userID};
+  end;`;
+
+  db.connect().then(async (connect) => {
+    connect.execute(query, {}, { autoCommit: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      res.status(200).json({ message: 'success' });
+      db.doRelease(connect);
+    });
+  });
+  return;
+});
+
+adminRoute.put('/user/change-password/:id', async (req, res) => {
+  const userID = req.params.id;
+  db.connect().then(async (connect) => {
+    const changePass = `update user_account set password = '${req.body.new_password}' where id = ${userID}`;
+    connect.execute(changePass, {}, { autoCommit: true }, (err, result) => {
+      if (err) {
+        res.status(500).json({
+          message: err.message | 'Error getting data from DB',
+        });
+        db.doRelease(connect);
+        return;
+      }
+      passMessage =
+        result.rowsAffected === 1 ? 'Change pass success!' : 'Wrong Old pass!';
+      res.status(200).json({ message: passMessage });
+      db.doRelease(connect);
+    });
+  });
+  return;
+});
 module.exports = adminRoute;
