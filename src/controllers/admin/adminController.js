@@ -943,13 +943,10 @@ adminRoute.put('/user/:id', async (req, res) => {
         : null
     }`;
   });
-  console.log(info);
   const query = `
   begin
     UPDATE user_account SET ${info} WHERE ID = ${userID};
   end;`;
-  console.log(query);
-
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {

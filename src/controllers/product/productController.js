@@ -65,7 +65,7 @@ function generateWhereLogicQuery(keyDetail, paramsList, param) {
       return `pd.id ${
         Array.isArray(paramsList[param])
           ? `in (${paramsList[param]})`
-          : `= ${paramsList[param]}) `
+          : `= ${paramsList[param]} `
       }`;
     return `pd.id in (select product_detail_id from product_category where ${param} in (SELECT id FROM ${
       param.includes('category') ? 'categories' : param.replace('_id', 's')
@@ -140,9 +140,7 @@ productRoute.get('/products', async (req, res) => {
     ).rows[0].LENGTH;
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        res
-          .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Error getting data from DB' });
         db.doRelease(connect);
         return;
       }

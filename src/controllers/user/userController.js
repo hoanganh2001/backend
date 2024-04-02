@@ -30,7 +30,18 @@ userRoute.post('/login', (req, res) => {
           row = Object.fromEntries(
             Object.entries(row).map(([k, v]) => [k.toLowerCase(), v]),
           );
+          delete row['otp'];
           if (row.password === req.body.password) {
+            delete row['password'];
+            if (row.status === 0) {
+              res.status(401).json({
+                accessToken: null,
+                message:
+                  'Tài khoản chưa được kích hoạt, check mail để kích hoạt hoặc liên hệ với admin để được hỗ trợ!',
+              });
+              db.doRelease(connect);
+              return;
+            }
             const options = {
               maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days,
               httpOnly: false,
@@ -69,11 +80,14 @@ userRoute.post('/login', (req, res) => {
 });
 
 userRoute.post('/sign-up', (req, res) => {
+  const bodyData = req.body;
+  bodyData['id'] = { type: oracledb.NUMBER, dir: oracledb.BIND_OUT };
+
   db.connect().then(async (connect) => {
     const checkUserExist = `SELECT * FROM USER_ACCOUNT WHERE NAME = :name OR EMAIL = :email`;
     connect.execute(
       checkUserExist,
-      [req.body.name, req.body.email],
+      [bodyData.name, bodyData.email],
       (err, result) => {
         if (err) {
           res.status(500).json({
@@ -83,38 +97,90 @@ userRoute.post('/sign-up', (req, res) => {
           return;
         }
         if (result.rows.length > 0) {
-          res.status(400).json({ message: 'User is already exsit' });
+          res.status(400).json({ message: 'Tài khoản hoặc email đã tồn tại!' });
           db.doRelease(connect);
           return;
         }
-        const sqlQuery = `INSERT INTO USER_ACCOUNT (NAME, EMAIL, PASSWORD,CREATE_DATE,ROLE_ID) VALUES(:name,:email,:password,:create_date,2)`;
-
+        const sqlQuery = `
+        DECLARE
+          user_id number;
+        Begin
+          INSERT INTO USER_ACCOUNT (NAME, EMAIL, PASSWORD,CREATE_DATE,ROLE_ID,STATUS) VALUES(:name,:email,:password,:create_date,2,0)
+          returning id into user_id;
+          :id := user_id;
+        end;
+          `;
         connect.execute(
           sqlQuery,
-          Object.values(req.body),
+          bodyData,
           { autoCommit: true },
-          (err, result) => {
+          async (err, result) => {
             if (err) {
               res.status(500).json({ message: 'Error saving employee to DB' });
               doRelease(connect);
               return;
             }
-            // const options = {
-            //   maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days,
-            //   httpOnly: false,
-            //   secure: true,
-            //   sameSite: 'None',
-            // };
-            // const token = jwt.sign({ id: row.id }, config.secret, {
-            //   algorithm: 'HS256',
-            //   allowInsecureKeySizes: true,
-            //   expiresIn: 30 * 24 * 60 * 60 * 1000, // 24 hours
-            // });
-            // res.cookie('SessionID', token, options);
-            res.json({ message: 'success' });
+            const id = result.outBinds.id;
+            await sendEmail({
+              to: bodyData.email,
+              subject: 'Active account',
+              message: `<p>Hi there, you have create account in our Website. Please confirm to active the account</p>
+                        <p>Active here: <a href="http://${req.get(
+                          'host',
+                        )}/api/active-account?id=${id}">Active</a></p>
+                        <p>If not you please, ignore this. Thank you for your time!</p>`,
+            }).catch((err) => {
+              throw err;
+            });
+            res.status(200).json({
+              success: true,
+              message:
+                'Tạo tài khoản thành công. Chúng tôi đã gửi 1 email đến mail của bạn, hãy xác nhận email để sử dụng tài khoản',
+            });
             db.doRelease(connect);
           },
         );
+      },
+    );
+  });
+});
+
+userRoute.get('/active-account', (req, res) => {
+  const { id } = req.query;
+  db.connect().then(async (connect) => {
+    const checkIsActived = `SELECT * FROM USER_ACCOUNT WHERE id = ${id} and status = 1`;
+    await connect.execute(checkIsActived, {}, (err, result) => {
+      if (err) {
+        res.status(500).json({
+          message: { message: 'Internal server error' },
+        });
+        res.send('<script>window.close();</script > ');
+        db.doRelease(connect);
+        return;
+      }
+
+      if (result.rows.length > 0) {
+        console.log(2);
+
+        res.send('<script>window.close();</script > ');
+        db.doRelease(connect);
+        return;
+      }
+    });
+    const sqlQuery = `update USER_ACCOUNT set STATUS = 1 where id = ${id}`;
+    await connect.execute(
+      sqlQuery,
+      {},
+      { autoCommit: true },
+      async (err, result) => {
+        if (err) {
+          res.send('<h2>Có lỗi xảy ra khi kích hoạt!</h2> ');
+          doRelease(connect);
+          return;
+        }
+        res.send('<script>window.close();</script > ');
+        db.doRelease(connect);
+        return;
       },
     );
   });
