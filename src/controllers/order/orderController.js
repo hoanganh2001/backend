@@ -3,6 +3,12 @@ const db = require('../../config/db');
 const oracledb = require('oracledb');
 const jwt = require('jsonwebtoken');
 const config = require('../../config/auth');
+const puppeteer = require('puppeteer');
+const fs = require('fs');
+const path = require('path');
+const utils = require('util');
+const hb = require('handlebars');
+const readFile = utils.promisify(fs.readFile);
 
 oracledb.fetchAsString = [oracledb.CLOB];
 
@@ -24,13 +30,26 @@ orderRoute.post('/check-out', async (req, res) => {
       : null;
     const bindValue = Object.values(req.body);
     if (!bindValue) {
-      res.status(400).json({ message: 'Wrong format Input' });
+      res.status(500).json({ message: 'Wrong format Input' });
       return;
     }
     const product = bindValue.pop();
+    const productCheck = await connect.execute(
+      `Select id from product_detail where id in (${product.map(
+        (t) => t.id,
+      )}) and quantity > 0`,
+      {},
+    );
+    if (product.length > productCheck.rows.length) {
+      res
+        .status(500)
+        .json({ message: 'Có sản phẩm không đủ số lượng hoặc đã hết!' });
+      return;
+    }
     let updateProduct = '';
     product.forEach((e) => {
-      updateProduct += `INSERT INTO ORDERS_DETAIL(PRODUCT_ID,QUANTITY,PRICE,DISCOUNT,ORDER_ID) VALUES (${e.id},${e.quantity},${e.price},${e.discount},order_id);`;
+      updateProduct += `INSERT INTO ORDERS_DETAIL(PRODUCT_ID,QUANTITY,PRICE,DISCOUNT,ORDER_ID) VALUES (${e.id},${e.quantity},${e.price},${e.discount},order_id);
+      UPDATE PRODUCT_DETAIL pd SET pd.QUANTITY = pd.QUANTITY - ${e.quantity} where pd.id = ${e.id};`;
     });
     const query = `
     DECLARE
@@ -39,17 +58,18 @@ orderRoute.post('/check-out', async (req, res) => {
       INSERT INTO ORDERS(USER_ID,NAME,ADDRESS,EMAIL,PHONE_NUMBER,NOTE,PAYMENT,COUPON,CREATE_DATE,STATUS)
       VALUES(${id}, :name, :address,:email,:phone_number,:note,:payment,:coupon,:create_date,1)
       returning id into order_id;
-      ${updateProduct}     
+      :id := order_id;
+      ${updateProduct}
     end;`;
+    bindValue['id'] = { type: oracledb.NUMBER, dir: oracledb.BIND_OUT };
     connect.execute(query, bindValue, { autoCommit: true }, (err, result) => {
       if (err) {
-        res
-          .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+        console.log(err);
+        res.status(500).json({ message: 'Error getting data from DB' });
         db.doRelease(connect);
         return;
       }
-      res.status(200).json({ message: result, isLogIn: !!id });
+      res.status(200).json({ message: result, isLogIn: !!id, isSuccess: true });
       db.doRelease(connect);
     });
   });
@@ -168,6 +188,51 @@ orderRoute.post('/order/cancel', async (req, res) => {
       db.doRelease(connect);
     });
   });
+});
+async function getTemplateHtml() {
+  console.log('Loading template file in memory');
+  try {
+    const invoicePath = path.resolve('./invoice-template.html');
+    return await readFile(invoicePath, 'utf8');
+  } catch (err) {
+    console.log(err);
+    return Promise.reject('Could not load html template');
+  }
+}
+
+orderRoute.get('/order/invoice', async (req, res) => {
+  let data = {
+    test: 'abczx',
+  };
+
+  getTemplateHtml()
+    .then(async (res) => {
+      // Now we have the html code of our template in res object
+      // you can check by logging it on console
+      // console.log(res)
+
+      const template = hb.compile(res, { strict: true });
+      // we have compile our code with handlebars
+      const result = template(data);
+      // We can use this to add dyamic data to our handlebas template at run time from database or API as per need. you can read the official doc to learn more https://handlebarsjs.com/
+      const html = result;
+
+      // we are using headless mode
+      const browser = await puppeteer.launch();
+      const page = await browser.newPage();
+
+      // We set the page content as the generated html by handlebars
+      await page.setContent(html);
+
+      // we Use pdf function to generate the pdf in the same folder as this file.
+      await page.pdf({ path: 'invoice234.pdf', format: 'A4' });
+
+      await browser.close();
+      console.log('PDF Generated');
+    })
+    .catch((err) => {
+      console.error(err);
+    });
 });
 
 module.exports = orderRoute;

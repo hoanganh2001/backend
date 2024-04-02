@@ -16,7 +16,7 @@ const adminRoute = require('./controllers/admin/adminController');
 
 db.createPool();
 const corsOptions = {
-  origin: 'http://localhost:4200',
+  origin: 'http://localhost:5000',
   credentials: true,
   exposedHeaders: '*',
 };
