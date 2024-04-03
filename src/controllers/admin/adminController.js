@@ -2,8 +2,10 @@ const express = require('express');
 const db = require('../../config/db');
 const adminRoute = express.Router();
 const uploadFile = require('../../services/uploadGGDr.service');
+const createInvoice = require('../../services/createInvoice.service');
 const formidable = require('formidable');
 const oracledb = require('oracledb');
+const dayjs = require('dayjs');
 
 function getQueryString(
   params,
@@ -571,7 +573,7 @@ adminRoute.get('/orders', async (req, res) => {
   });
 });
 
-adminRoute.put('/order/:id/onway', async (req, res) => {
+adminRoute.put('/order/:id/confirm', async (req, res) => {
   const orderID = req.params.id;
   const update_date = req.body.params['date'];
   if (!orderID) {
@@ -582,6 +584,35 @@ adminRoute.put('/order/:id/onway', async (req, res) => {
     const query = `select status from orders where id = ${orderID}`;
     const status = await connect.execute(query, {});
     if (status.rows[0].STATUS === 1) {
+      const updateQuery = `update orders set status = 5, update_date = '${update_date}' where id = ${orderID}`;
+      connect.execute(updateQuery, {}, { autoCommit: true }, (err, result) => {
+        if (err) {
+          res.status(500).json({ message: err | 'Error getting data from DB' });
+          db.doRelease(connect);
+          return;
+        }
+        res.status(200).json({ message: 'success', isSuccess: true });
+        db.doRelease(connect);
+      });
+    } else {
+      res.status(500).json({ message: 'Status is not satisfy!' });
+      db.doRelease(connect);
+      return;
+    }
+  });
+});
+
+adminRoute.put('/order/:id/onway', async (req, res) => {
+  const orderID = req.params.id;
+  const update_date = req.body.params['date'];
+  if (!orderID) {
+    res.status(404).json({ message: 'Do not have order!' });
+    return;
+  }
+  db.connect().then(async (connect) => {
+    const query = `select status from orders where id = ${orderID}`;
+    const status = await connect.execute(query, {});
+    if (status.rows[0].STATUS === 5) {
       const updateQuery = `update orders set status = 2, update_date = '${update_date}' where id = ${orderID}`;
       connect.execute(updateQuery, {}, { autoCommit: true }, (err, result) => {
         if (err) {
@@ -621,6 +652,72 @@ adminRoute.put('/order/:id/success', async (req, res) => {
         res.status(200).json({ message: 'success' });
         db.doRelease(connect);
       });
+    } else {
+      res.status(500).json({ message: 'Status is not satisfy!' });
+      db.doRelease(connect);
+      return;
+    }
+  });
+});
+
+adminRoute.put('/order/:id/invoice', async (req, res) => {
+  const orderID = req.params.id;
+  if (!orderID) {
+    res.status(404).json({ message: 'Do not have order!' });
+    return;
+  }
+  db.connect().then(async (connect) => {
+    const query = `select status from orders where id = ${orderID}`;
+    const status = await connect.execute(query, {});
+    if ([2, 3, 5].includes(status.rows[0].STATUS)) {
+      const getQuery = `SELECT o.*,
+      (select listagg ('id|' || od.product_id || ',' || 'name|' ||  pd.name || ',' || 'image|' || im.file_id || ',' || 'quantity|' || od.quantity || ',' || 'price|' || od.price || ',' || 'discount|' || od.discount ,';') within group (order by od.product_id) "product" 
+      from ORDERS_DETAIL od left join product_detail pd on od.product_id = pd.id left join images im on pd.thumbnail = im.id
+      where od.order_id = o.id) as product 
+      from orders o where id = ${orderID}`;
+      try {
+        const result = await connect.execute(getQuery, {});
+        const order = result.rows.map((item) => {
+          item.PRODUCT = item.PRODUCT.split(';').map((t) =>
+            Object.fromEntries(
+              t.split(',').map((e) => {
+                return e.split('|').map((i) => {
+                  return isNaN(+i) ? i : i ? +i : null;
+                });
+              }),
+            ),
+          );
+          return Object.fromEntries(
+            Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
+          );
+        })[0];
+        const createdDate = dayjs();
+        const fileName = `invoice_${order.id}_${dayjs(createdDate).format(
+          'YYYY_MM_DD_HH_mm_ss',
+        )}.pdf`;
+        const invoiceId = await createInvoice.create(
+          createInvoice.generateData(order, createdDate),
+          fileName,
+        );
+        const updateInvoicequery = `
+        DECLARE
+          invoice_id number;
+        Begin
+        INSERT INTO INVOICES(FILE_ID,CREATE_DATE,ORDER_ID)
+        VALUES('${invoiceId}','${createdDate.toISOString()}',${orderID})
+        return id into invoice_id;
+        UPDATE ORDERS SET invoice = invoice_id where id = ${orderID};
+        End;`;
+        await connect.execute(updateInvoicequery, {}, { autoCommit: true });
+        res.status(200).json({ message: 'Success!' });
+        db.doRelease(connect);
+        return;
+      } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: 'Server error!' });
+        db.doRelease(connect);
+        return;
+      }
     } else {
       res.status(500).json({ message: 'Status is not satisfy!' });
       db.doRelease(connect);

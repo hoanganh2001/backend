@@ -2,7 +2,8 @@ const { google } = require('googleapis');
 const fs = require('fs');
 const { resolve } = require('path');
 
-const FOLDER_ID = '1aHCngO3_VGA3eMQl7Ilo8A9m0hGEb89K';
+const FOLDER_IMAGE_ID = '1aHCngO3_VGA3eMQl7Ilo8A9m0hGEb89K';
+const FOLDER_INVOICE_ID = '1Ep8nk30DXVHSrvbdkKekBdzM9DSeeWxp';
 
 upload = async (fileList) => {
   const auth = new google.auth.GoogleAuth({
@@ -19,7 +20,7 @@ upload = async (fileList) => {
       const requestBody = {
         name: f.originalFilename,
         fields: 'id',
-        parents: [FOLDER_ID],
+        parents: [FOLDER_IMAGE_ID],
       };
       const media = {
         mimeType: f.mimetype,
@@ -37,6 +38,36 @@ upload = async (fileList) => {
     }),
   );
   return ids;
+};
+
+uploadOrder = async (file, fileName) => {
+  const auth = new google.auth.GoogleAuth({
+    keyFile: 'ggKey.json',
+    scopes: ['https://www.googleapis.com/auth/drive'],
+  });
+  const driveService = google.drive({
+    version: 'v3',
+    auth,
+  });
+  const requestBody = {
+    name: fileName,
+    fields: 'id',
+    parents: [FOLDER_INVOICE_ID],
+  };
+  const media = {
+    mimeType: 'application/pdf',
+    body: file,
+  };
+  try {
+    const response = await driveService.files.create({
+      resource: requestBody,
+      media: media,
+    });
+    return response?.data?.id;
+  } catch (err) {
+    console.log(err);
+  }
+  return;
 };
 
 deleteFile = async (fileList) => {
@@ -62,5 +93,5 @@ deleteFile = async (fileList) => {
   );
 };
 
-const uploadFile = { upload, deleteFile };
+const uploadFile = { upload, deleteFile, uploadOrder };
 module.exports = uploadFile;

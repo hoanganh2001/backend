@@ -34,7 +34,7 @@ function doc3So(numb) {
 
 function docNhieuSo(numb) {
   return (result = numb
-    .toLocaleString('en')
+    ?.toLocaleString('en')
     .split(',')
     .reverse()
     .map((val, index) => {

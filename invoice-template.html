@@ -14,7 +14,7 @@
 
         html {
             width: 750px;
-
+            -webkit-print-color-adjust: exact;
             padding-right: 20px;
             padding-left: 20px;
             margin: auto !important
@@ -263,17 +263,17 @@
         }
 
         .KE_DONG_BEN_MUA .buyer .dottedLine {
-            border-bottom: 1px dotted;
+            border-bottom: 1px dotted !important;
             position: absolute
         }
 
         .KE_DONG_BEN_BAN .seller .dottedLine {
-            border-bottom: 1px dotted;
+            border-bottom: 1px dotted !important;
             position: absolute
         }
 
         .KE_DONG_BANG_HANG .table .dottedLine {
-            border-bottom: 1px dotted;
+            border-bottom: 1px dotted !important;
             position: absolute
         }
 
@@ -360,28 +360,28 @@
             left: 0 !important
         }
 
-        .BEN_BAN_THANG_HANG .seller.khungSmall .colLabel {
+        .BEN_BAN_THANG_HANG .seller.data.khungSmall .colLabel {
             width: 80px
         }
 
-        .BEN_BAN_THANG_HANG .seller.khungSmall .colVal {
+        .BEN_BAN_THANG_HANG .seller.data.khungSmall .colVal {
             width: 100%;
             float: left
         }
 
-        .KHONG_SONG_NGU.BEN_BAN_THANG_HANG .seller.khungSmall .colVal {
+        .KHONG_SONG_NGU.BEN_BAN_THANG_HANG .seller.data.khungSmall .colVal {
             width: calc(100% - 95px)
         }
 
-        .BEN_BAN_THANG_HANG.CO_SONG_NGU .seller.khungSmall .colLabel {
+        .BEN_BAN_THANG_HANG.CO_SONG_NGU .seller.data.khungSmall .colLabel {
             width: 145px
         }
 
-        .BEN_BAN_THANG_HANG.CO_SONG_NGU .seller.khungSmall .colVal {
+        .BEN_BAN_THANG_HANG.CO_SONG_NGU .seller.data.khungSmall .colVal {
             width: calc(100% - 160px)
         }
 
-        .BEN_BAN_THANG_HANG.CO_SONG_NGU.KE_DONG_BEN_BAN .seller.khungSmall .colVal {
+        .BEN_BAN_THANG_HANG.CO_SONG_NGU.KE_DONG_BEN_BAN .seller.data.khungSmall .colVal {
             width: calc(100% - 155px)
         }
 
@@ -453,17 +453,17 @@
         }
 
         .table tbody tr td.donghang {
-            border-top: 1px solid
+            border-top: 1px dotted !important;
         }
 
         .table thead tr th {
             border-bottom: 1px solid;
-            border-left: 1px solid
+            border-left: 1px solid black !important;
         }
 
         .table tbody tr td {
             border-bottom: none;
-            border-left: 1px solid
+            border-left: 1px solid black !important;
         }
 
         .table thead tr th:first-child,
@@ -526,17 +526,17 @@
         }
 
         .BANG_CO_KE_DONG_MO .table tbody tr td.donghang {
-            border-top: 1px dotted black
+            border-top: 1px dotted !important
         }
 
         .BANG_KHONG_CO_KE_DONG .table tbody tr td,
         .table tbody tr:first-child td.donghang {
-            border-top: none
+            border-top: none !important
         }
 
         .BANG_CO_KE_COT_MO .table thead tr th,
         .BANG_CO_KE_COT_MO .table tbody tr td {
-            border-left-color: #dddddd
+            border-left-color: black
         }
 
 
@@ -1175,7 +1175,6 @@
 														<td class="donghang"></td>\
 														<td class="donghang"></td>\
 														<td class="donghang"></td>\
-														<td class="donghang"></td>\
 														<td class="donghang"></td>';
 
             if (document.body.classList.contains('NHIEU_TRANG')) {
@@ -1425,7 +1424,7 @@
                                                 <img data-src="anhLogo" id="anhLogo" data-style="styleLogo" reduced=""
                                                     width="197.49098205566406"
                                                     class="&#xA;          logo resizable&#xA;				"
-                                                    src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAA5ASgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDlrq6uBdzATyffP8Z9ah+13P8Az3k/76NF3/x+Tf75/nUNeefriSsTfa7n/nvJ/wB9Gj7Xc/8APeT/AL6NQ0UDsib7Xc/895P++jR9ruf+e8n/AH0ahooCyJvtdz/z3k/76Naej6VrmvySx6Yk1w0QBcCTGAenU1jV6j8Ff+Qlq3/XKP8AmaqC5pWOLMcQ8Nhp1oJNrv6nnuoR6lpd9LZXrSxXERw6F8479q0r/wAN+JtM006jeW80VoApMhlB69OhqX4if8j7qv8A10X/ANBFep/EL/kl7f7kH8xVKCd/I462YVIfVrJfvLX+dtvvPDPtdz/z3k/76NH2u5/57yf99GoaKzPZsib7Xc/895P++jR9ruf+e8n/AH0ahooCyNTSbHWNcuza6aJp5ghcqJMcevJpNUtNW0W9NnqHmwXAUNsMmeD06Gus+EH/ACOMv/Xq38xUHxZ/5HqT/r2j/rV8vucx5ixkv7QeFsuXlv5nG/a7n/nvJ/30aPtdz/z3k/76NQ0VB6dkTfa7n/nvJ/30aPtdz/z3k/76NQ0UBZE32u5/57yf99Gj7Xc/895P++jUNFAWRN9ruf8AnvJ/30aPtdz/AM95P++jUNFAWRN9ruf+e8n/AH0aPtdz/wA95P8Avo1DRQFkTfa7n/nvJ/30aPtdz/z3k/76NQ0UBZE32u5/57yf99Gj7Xc/895P++jUNFAWRN9ruf8AnvJ/30a0YLDUZ7WK5+2wxRy5KCW52kgHBOPrWRW1c/8AIH0j/rjJ/wCjDSbsrmNZuNlHq/0Yf2bf/wDQUs//AAMFH9m3/wD0FLP/AMDBXY6B8M313Q7XUl1QQidSfL8nO3kjrn2rS/4U5J/0Gl/8B/8A69UoVGrpHkzzjDQk4SqK6/us88/s2/8A+gpZ/wDgYKP7Nv8A/oKWf/gYK9D/AOFOSf8AQaX/AMB//r1geLfAbeFdOhu21AXPmS+XtEW3HBOevtSlGpFXaKpZrh601ThUTb/usy9CtL608S6HNJdxywvqMMZMU+/neDg/hRT/AA5/x+6N/wBhu3/pRXRh3eNzwOI5N1IX7P8AM6XwZ8O7HW7WbWNXkkMDyuIoUbaMA4LMasy2XwpilaNrhCynB2ySEfmK6Pwp/wAkym/65XP82rwAdBUytFKyPUwsK2OxFbnqyiouyUXbv/kenarb/DNdIvDp8wN4IW8gb5Pv446+9cn4M8Lv4r1sWRlMMEaeZNIBkhemB7muer0v4Mf8h/Uv+vYf+hCpVpSSsd2JhPAYKpOFSUn0cne3Q3NR8LfDjw86W2py7JyM7XmcuR6kL0qktp8KHYKLhRk4yZJQK0fFHw4t9e8Q3OovriWzS7cxFASuAB61j/8ACoLX/oZYv+/Q/wDiq0alfSKPFo18NKnGVXFT5mtbX3+4PGfw30yy0CTWtDmcRxKJGjZ96uh7qab8Ff8AkJat/wBco/5muw12C30z4Y3empdxTNb2PlBgwBbA9M1x/wAFP+Qjq3/XKP8AmaOVKorDjiKtbKq6qS5rOyb3tdHKfET/AJH3Vf8Arov/AKCK9T+IX/JL2/3IP5ivLPiJ/wAj7qv/AF0X/wBBFep/EL/kl7f7kH8xSj9o6MV/zA/L/wBtPLfA3hQeLNaa3llaK1gTzJmX7xGcAD616Bqfhv4baFOtpqLiOfaCUaZ2bHqcdKyPgr/yFdW/64p/M1y3xE/5H7Vv99f/AEAVKsoXsb1fbYrMpYf2jjGMU/ddu3+Z2aWnwodwouFBJxkySgVX8bfDjTdO0GTWtElcRxAO8TPvVkPdT+NeWHoa931D/kin/cOT+lONpJ3Rni6dbAVaMoVZSUpJNSdziPg//wAjjL/16t/MV6T4h8N+EtS1Q3WstCLtkA+e52HaOnGa82+D/wDyOMv/AF6N/MVX+LQH/CdSf9e0f9aIu1Pa5GKw88Rm7hCbg+XdHeDwX8PSQA9sSen+m/8A2VYXjX4Y2Nho82q6I0i+Qu+SBm3Bk7lT14615Rgele+eH5ZJvg+Glcu32CVcscnADAU4uM7qwsXSxWXOnVVdyTkk0/8Ahzx/wn4dk8Ua9HpyS+Um0ySyYztUenvXpmoeEfh54bWKHVpiszjI8yZi7e+F6CuY+Dv/ACN83/Xm3/oS1B8Wv+R5f/r2j/rUxsoc1jpxTrYjMvqqqOMVG+mjOgFr8JywH2hRn1eWjxR8M9K/sGTV/D0zgRxed5ZfekiAZOD2OK8mr3zwz/ySBP8Arwm/9mpwtO6aMcfTrZf7OrTrSd5JNSd0eQeEfDcvirXY7BJPKiCmSaXGdqj09zXrT/DrwTp0aJeYViOGnuipb9RXH/Bj/kYr7/r0/wDZhWX8U3Z/Hl0rsWVIowoJ6Db2pRsoczVzTFvEYrMXhYVHCMY30/rzPQV8FfD1mCq9sSTgAXvX/wAernPHfw1s9J0mTVtGaRY4cGaB23Db6qfb0ry0gY6V75eu8nwZZ5GLMdMXJJyTwKqLjNPQxxFPFZfVpSVZyUpJNP8A4c8h8IeG38U68mniUxRBTJLIBkqo9Pc16XqPhP4deHfLg1SXbMwyBJMxcj1wtc38G/8Akabv/r0P/oQrq/Fvw8g8Q+IZdRk1tLVnRV8pkBIwMeopQj7l0rsMxxb+v+xqVXCCV/d7/Iyha/CdmA89RnuXlpni34baTD4el1rQJnCxR+cUL70kT1B9cVH/AMKgtf8AoZYv+/S//FV2N9a2+j/DW60tb2Kc29i8YcMAW4PbNUo3T5kctTFxpVKbwtec9UmpXtb5pHz3W1c/8gfSP+uMn/ow1iDoK27n/kD6R/1xk/8ARhrln8J9ZX3j6/oz2vwYs7/DW0W1O24a3kERzjDZbH615VP4u8W2k8lvc6tdxzxNtkRsAgj8Kr6L4r1rQCBY3rCEHPkSfMh/Dt+FaHiDxFpvimFbq5szZatGuPMi+aOceh7g+h5pyqKUVZ2aPBoYGVDETlUgpwm73tdr5Pp6FT/hN/E//Qauf0/wqTVPFt3rfhmLTdRdprmC48xJyPvJg8H3BNCeELvUNKGp6K4v7fpJEvE0Ldwy9/qK550eKRo5EZHU4ZWGCPwrNymlr1O+nSwlSV6cVeL6KzTN3w5/x+6N/wBhu3/pRR4c/wCP3Rv+w3b/ANKK7cN8J81xF/Eh8z1DwBNb6n4Im06OYCVGmhlHdNxODj6GvPJvhJ4nimZIltZYwflcTY3D6GuUTULzTdUmnsbqa2l3n54nKnrWn/wnnir/AKDdz+n+FRzxaSl0Pehl+Mw9adTCzjabu1JP9C7e/DPxLp9jPeXENuIYEMjkTgnAGTWn8H763tvFFzBNIEe5t9sWTjcQQcfXFc3ceNfEt3bSW8+sXEkMqlHQ4wwPUdKwlZkZWRirKcgg4INTdJpxOqWFxGIw06OKkry2cb/qet+Ovh1rWs+JZdS0wwyRTqu5Xk2FSBj8RxXNf8Kp8V/88bf/AMCRWPH448URRrGmt3W1RgZYH9TT/wDhPPFX/Qbuf0/wpt0272Oajh80o01TjODS01TLeo/DjxJpenT311FAIIELuROCcD2rpPgr/wAhHVv+uUf8zXFXXjLxHfWstrdavPLBKu10bGGHp0qlpet6nojyPpl5JbNKAHKY+YDpSTipJo2rYXF4nCTo1pR5nta9um5r/ET/AJH3Vf8Arov/AKCK9T+IX/JL2/3IP5ivDb29udSvJLu8maa4kOXkbqe1aF54p13ULA2N5qc01qQAYmxjjp2pqaV/MitltSp9Ws1+7tfztbb7jufgr/yFdW/64p/M07xh8OvEGseK77ULKK3e3nZWQtMFP3QOn4U34K/8hXVv+uKfzNUfG/i/xDp3jLUbSz1WeG3idQka4wPlB9KpW9mrnBJYh5vV+rtJ8q3vtp2Kq/CbxSzBWitVBOCxnHFeheMFg8P/AAtk02edWkFsltH2MjcdBXk//CeeKv8AoN3P6f4Vj3+p32qTedf3c1zIOjSuTj6elLnik+U655fjMTVpyxM48sHf3U/1O1+D/wDyOMv/AF6N/MVB8Wf+R6k/69o/61yem6tf6Pcm5066e2mK7C6Yzj0pNR1O91e7N3qFy9xOVC7364HQVPN7nKdawU1mDxV1bltbqVK948N/8kd/7cpv/Zq8HrXg8U65baZ/ZsOpTJZ7CnkjGNp6j9aISUWGZ4KeLhCMGlaSep0PwmvYLPxkqzyKnn27RxljgFsg4/Sur+IPw/1fX9fGp6a0EitEsbRu+0qR3968cBIIIJBHII7VvQeNfE1tEsUWt3YRRgBm3Y/OnGS5eWRjisBiHi1i8NJJ2s09vwNkfCfxUSAYLUZ7mccV6bLbx+EfhjLZ31whaG0eMsOAzsDgD8TXjv8Awnnir/oN3P6f4Vl6lrWp6w6tqN/PclfuiR8gfQdKanGPwmFbL8bi5QWJnHli7+6nf8Tufgx/yMd9/wBev/swrJ+KP/I+3n/XOP8A9BFc5pmsajos7zabdyW0jrtZkxyOuKi1DUbzVbxru/uHnuGADSP1IHSp5lycp2RwM1mEsXdWcbW69Cqehr3q5/5Isf8AsGL/ACFeDVrt4p11tL/sxtTmNl5fleTxjZ6dKISUbhmOCninTcGlyyvqdL8JL63tPF7RzyBDcW5jjJOAWyDj9K6Xx98PdY13xEdT0xoZEljVXR5NhUgY/EV4+CVIZSQQcgg8it6Hxt4ngiWOPW7sIowAWz+ppxkuXlkZYnAYj639bw0knazT2/A2P+FU+K/+eNv/AOBAqvffDXxLp9hPeXEUAhgQyOROCcDrxVL/AITzxV/0G7n9P8KiuPGniS7tpLe41i4khlUo6HGGB6jpS9wuMM05lzShb0ZhVtXP/IH0j/rjJ/6MNYtbVz/yB9I/64yf+jDWU/hO6vvH1/RkE1tNbpC8sbKkyeZGx6MucZH41FXs3hzRdF1/wDo8GqiNjErMh8zay/Me9Wf+Fd+Dv7p/8Cj/AI0/q8mrpngvPaNOUoVIu6bWi7P1PL/B+u3eheILd7ZsxzyLFNETw4Jx+Yzwa774u2luNHs7oQRi4NxsMoX5iNp4zWrD4B8IQTxzRjDxsHU/aj1ByO9Zvxanil8PWYjlRyLocKwP8JrXklClJSOB4ylisxo1KKa6O+lzz7w5/wAfujf9hu3/AKUUeHP+P3Rv+w3b/wBKK0w3wmHEX8SHzOYu/wDj8m/3z/OoasXP/H1L/vn+dRVzn3ijoMop9FBXKMop9FAcoyin0UByjKKfRQHKdt8M/Eul+Gr/AFCXU5miSaJVQqhbJB56VheMdStdX8W6hf2Tl7eZlKMVIzhQOh+lY1FVzPl5TjhgKcMTLEpvmkreXT/IZRT6Kk7OUZRT6KA5RlFPooDlGUU+igOUZRT6KA5RlFPooDlGUU+igOUZRT6KA5RlFPooDlGVvottd6Tp6/2hawyQo6OkrMCCXJHQehrDopNXVjKpR57a2sbP2CD/AKC+n/8Afxv/AImj7BB/0F7D/v43+FY1FLkRn9Wl/N+Rs/YIP+gvYf8Afxv8KPsEH/QX0/8A7+N/8TWNRRyIPq0v5vyOt0QW8GraHbpe29xK2sQSYhJOFyBzkDvRWR4W/wCRv0X/AK/4P/Rgorrw+x8dxNT9nUpq99H+Z//Z"
+                                                    src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIGhlaWdodD0iNDEiIHZpZXdCb3g9IjAgMCAxNjUgNDEiIHdpZHRoPSIxNjUiPjxnIGZpbGw9IiNmZmYiPjxwYXRoIGQ9Im0xNy44MzU2IDEuMDk4ODhoLTE3LjgzNTZ2NS44MzI0OGMwIDIuMTk3NzQgMS43NzUxIDMuOTMwNTQgMy45MzA1OCAzLjkzMDU0aDE1LjU1MzMybC0xMy42NTE0MiAxMi4wMDMxaDguNTM3NDJjMy40MjM0IDAgNi4yMTI4IDIuNzg5NSA2LjIxMjggNi4yMTI5djMuNDY1N2MwIDMuNDIzNC0yLjc4OTQgNi4yMTI4LTYuMjEyOCA2LjIxMjhoLTEzLjEwMTk3di00LjIyNjRjMC0xLjU2MzggMS4yNjc5My0yLjgzMTcgMi44MzE3MS0yLjgzMTdoMTIuMjU2NjZjLjMzODEgMCAuNjM0LS4yOTU5LjYzNC0uNjM0cy0uMjk1OS0uNjM0LS42MzQtLjYzNGgtMTIuMjU2NjZjLTIuMjQwMDEgMC00LjA1NzM3NTcgMS44MTc0LTQuMDU3Mzc1NyA0LjA1NzR2NS40NTIxaDE0LjMyNzYzNTdjNC4wOTk2IDAgNy40Mzg1LTMuMzM4OSA3LjQzODUtNy40Mzg1di0zLjQ2NTdjMC00LjA5OTYtMy4zMzg5LTcuNDM4NS03LjQzODUtNy40Mzg1aC01LjI0MDhsMTIuNjc5My0xMS4xMTU1di01LjQ1MjE0YzAtMi4xNTU0OC0xLjc3NTEtMy45MzA1OC0zLjk3MjgtMy45MzA1OHoiIGZpbGw9IiMwMDAwMDAiLz48cGF0aCBkPSJtNDkuMDI2NiAxNS42ODAxIDUuNjYzNC02LjE3MDYyYy43MTg1LS43NjA3NiAxLjA5ODktMS43NzUxMSAxLjA1NjYtMi44MzE3MS0uMDQyMy0xLjA1NjYxLS41MDcyLTIuMDI4NjktMS4yNjc5LTIuNzQ3MTlsLTQuMjY4Ny0zLjkzMDU4LTE0LjM2OTkgMTUuNTUzM2MtMS40MzcgMS41NjM4LTIuMTU1NSAzLjU1MDItMi4wNzEgNS42NjM0LjA4NDYgMi4xMTMyLjk3MjEgNC4wNTc0IDIuNTM1OSA1LjQ5NDRsNy45NDU3IDcuMzU0LS4wODQ1LTUuNjYzNWMtLjA4NDYtNC43MzM2IDEuNjQ4My05LjI1NTkgNC44NjA0LTEyLjcyMTV6IiBmaWxsPSIjMDAwMDAwIi8+PHBhdGggZD0ibTU0Ljc3NDYgMzAuNDMwNC03Ljk4OC03LjM1NC0uMjUzNSAxLjAxNDRjLS4zMzgyIDEuMzk0Ny0uNTA3MiAyLjgzMTctLjQ2NDkgNC4yNjg3bC4xMjY3IDcuNDM4NSA0Ljg2MDQgNC40OCAzLjkzMDYtNC4yNjg3YzEuNDc5My0xLjYwNiAxLjM1MjUtNC4wOTk2LS4yMTEzLTUuNTc4OXoiIGZpbGw9IiMwMDAwMDAiLz48cGF0aCBkPSJtMzQuODY4MiAyOC40ODYyYy0uMzM4MSAwLS42MzQuMjk1OC0uNjM0LjYzMzl2OS42MzYzaC00LjQ4Yy0xLjU2MzggMC0yLjg3NC0xLjI2NzktMi44NzQtMi44NzR2LTMzLjU1Nzg2aDQuNTIyM2MxLjU2MzggMCAyLjg3NCAxLjI2NzkzIDIuODc0IDIuODczOTh2Ni44MDQ1OGMwIC4zMzgxLjI5NTguNjMzOS42MzM5LjYzMzlzLjYzNC0uMjk1OC42MzQtLjYzMzl2LTYuODA0NThjMC0yLjI0MDAxLTEuODU5Ni00LjA5OTY0LTQuMDk5Ni00LjA5OTY0aC01Ljc5MDN2MzQuODI1ODJjMCAyLjI0IDEuODU5NyA0LjA5OTYgNC4wOTk3IDQuMDk5Nmg1Ljc0Nzl2LTEwLjkwNDJjMC0uMzM4MS0uMjk1OC0uNjMzOS0uNjMzOS0uNjMzOXoiIGZpbGw9IiMwMDAwMDAiLz48cGF0aCBkPSJtODIuMjQ2MyAxMy4yNzA5Yy0xLjI2NzktLjM4MDMtMi4zNjY4LS41OTE3LTMuMzM4OS0uNTkxNy0xLjA1NjYgMC0xLjkwMTkuMjExNC0yLjUzNTkuNTkxNy0uNjMzOS4zODA0LS45Mjk4Ljk3MjEtLjkyOTggMS42OTA2IDAgLjYzNC4yMTE0IDEuMTgzNC42MzQgMS42MDYxLjQyMjYuNDIyNi45NzIxLjgwMyAxLjY0ODMgMS4wNTY2LjY3NjIuMjk1OCAxLjU2MzguNTkxNyAyLjcwNDkuOTI5OCAxLjU2MzguNDY0OSAyLjg3NC45Mjk4IDMuODg4MyAxLjM5NDcgMS4wMTQ0LjQ2NDkgMS44NTk3IDEuMTQxMSAyLjU3ODIgMi4wNzEuNzE4NS45Mjk4IDEuMDU2NiAyLjExMzIgMS4wNTY2IDMuNTkyNCAwIDEuNDM3LS4zODA0IDIuNjYyNy0xLjE0MTIgMy43MTkzLS43NjA3IDEuMDU2Ni0xLjgxNzMgMS44NTk2LTMuMTY5OCAyLjQwOS0xLjM1MjQuNTQ5NS0yLjg3NC44NDUzLTQuNjQ5MS44NDUzLTEuODE3MyAwLTMuNTkyNC0uMzM4MS01LjM2NzUtMS4wMTQzLTEuNzMyOS0uNjc2Mi0zLjI1NDQtMS42MDYxLTQuNTY0Ni0yLjc0NzJsMS44NTk2LTMuODAzOGMxLjE4MzUgMS4wOTg5IDIuNDkzNiAxLjk0NDIgMy45NzI5IDIuNTc4MSAxLjQ3OTIuNjM0IDIuODMxNy45Mjk5IDQuMDk5Ni45Mjk5IDEuMjY4IDAgMi4yNC0uMjUzNiAyLjk1ODUtLjcxODVzMS4wNTY2LTEuMTQxMiAxLjA1NjYtMS45NDQyYzAtLjY3NjItLjIxMTMtMS4yMjU3LS42MzM5LTEuNjQ4My0uNDIyNy0uNDIyNi0uOTcyMS0uODAzLTEuNjQ4My0xLjA1NjYtLjY3NjMtLjI1MzYtMS41NjM4LS41NDk0LTIuNzQ3Mi0uODg3Ni0xLjU2MzgtLjQ2NDktMi44NzQtLjkyOTgtMy44ODgzLTEuMzUyNC0xLjAxNDQtLjQ2NDktMS44NTk3LTEuMTQxMi0yLjU3ODItMi4wMjg3LS43MTg0LS44ODc2LTEuMDU2Ni0yLjA3MS0xLjA1NjYtMy41NTAyIDAtMS4zNTI1LjM4MDQtMi41MzU5IDEuMDk4OS0zLjU1MDIuNzE4NS0xLjAxNDQgMS43MzI5LTEuODE3MzkgMy4wODUzLTIuMzY2ODIgMS4zMTAyLS41NDk0NCAyLjg3NC0uODQ1MjkgNC42MDY4LS44NDUyOSAxLjUyMTUgMCAzLjAwMDguMjExMzIgNC40OC42NzYyMyAxLjQ3OTMuNDY0OTEgMi43ODk1IDEuMDU2NTggMy45NzI5IDEuODE3MzhsLTEuODE3NCAzLjkzMDZjLTEuMTQxMS0uNzYwOC0yLjM2NjgtMS4zNTI1LTMuNjM0Ny0xLjczMjl6IiBmaWxsPSIjMDAwMDAwIi8+PHBhdGggZD0ibTkzLjAyMzcgOC45NTk5Nmg0LjQ4djEwLjAxNjY0aDExLjY2NTN2LTEwLjAxNjY0aDQuNTIydjIzLjQxNDQ0aC00LjQ4di05LjUwOTVoLTExLjY2NXY5LjUwOTVoLTQuNDgwMXYtMjMuNDE0NDR6IiBmaWxsPSIjMDAwMDAwIi8+PHBhdGggZD0ibTEzNi4yMTggMTAuMjI4MWMxLjkwMiAxLjA1NjYgMy40MjMgMi40OTM2IDQuNDggNC4zMTEgMS4wOTkgMS44MTczIDEuNjQ4IDMuODQ2IDEuNjQ4IDYuMDg2cy0uNTQ5IDQuMjY4Ny0xLjY0OCA2LjA4NjFjLTEuMDk5IDEuODU5Ni0yLjU3OCAzLjI5NjYtNC40OCA0LjM1MzJzLTQuMDE1IDEuNjA2MS02LjM0IDEuNjA2MWMtMi4zMjQgMC00LjQzNy0uNTQ5NS02LjMzOS0xLjYwNjFzLTMuNDI0LTIuNTM1OS00LjQ4LTQuMzUzMmMtMS4wOTktMS44NTk2LTEuNjQ5LTMuODg4My0xLjY0OS02LjA4NjEgMC0yLjI0LjU1LTQuMjY4NyAxLjY0OS02LjA4NiAxLjA5OS0xLjgxNzQgMi41NzgtMy4yNTQ0IDQuNDgtNC4zMTEgMS45MDItMS4wNTY2MiA0LjAxNS0xLjU2Mzc5IDYuMzM5LTEuNTYzNzkgMi4zMjUgMCA0LjQzOC41MDcxNyA2LjM0IDEuNTYzNzl6bS0xMC4yNyAzLjUwNzljLTEuMjI2LjcxODUtMi4xOTggMS42NDgzLTIuOTE2IDIuODc0LS43MTkgMS4yMjU3LTEuMDU3IDIuNTc4MS0xLjA1NyA0LjAxNTEgMCAxLjQ3OTMuMzggMi44MzE3IDEuMDk5IDQuMDU3NC43MTggMS4yMjU3IDEuNjkgMi4xOTc3IDIuOTE2IDIuOTE2MnMyLjUzNiAxLjA1NjYgMy45NzMgMS4wNTY2YzEuMzk1IDAgMi43MDUtLjMzODEgMy45My0xLjA1NjYgMS4xODQtLjcxODUgMi4xNTYtMS42OTA1IDIuODc0LTIuOTE2Mi43MTktMS4yMjU3IDEuMDU3LTIuNTc4MSAxLjA1Ny00LjA1NzQgMC0xLjQ3OTItLjMzOC0yLjgzMTctMS4wNTctNC4wMTUxLS43MTgtMS4yMjU3LTEuNjQ4LTIuMTU1NS0yLjg3NC0yLjg3NC0xLjIyNS0uNzE4NS0yLjQ5My0xLjA1NjYtMy45My0xLjA1NjYtMS40NzkgMC0yLjc5LjMzODEtNC4wMTUgMS4wNTY2eiIgZmlsbD0iIzAwMDAwMCIvPjxwYXRoIGQ9Im0xNjIuNTkxIDExLjA3MzJjMS42MDYgMS4zOTQ3IDIuNDA5IDMuMzgxMSAyLjQwOSA1Ljk1OTIgMCAyLjY2MjctLjgwMyA0Ljc3NTktMi40MDkgNi4yNTUyLTEuNjA2IDEuNDc5Mi0zLjg4OCAyLjI0LTYuODQ3IDIuMjRoLTUuMTE0djYuODg5MWgtNC40OHYtMjMuNDU2NzRoOS41OTRjMi45NTkgMCA1LjI0MS42NzYyMyA2Ljg0NyAyLjExMzI0em0tMy4xNyA5LjM0MDRjLjg4OC0uNzE4NSAxLjM1My0xLjgxNzQgMS4zNTMtMy4yOTY2IDAtMS40MzctLjQ2NS0yLjQ5MzYtMS4zNTMtMy4yMTIxLS44ODctLjcxODUtMi4xOTgtMS4wNTY2LTMuODg4LTEuMDU2NmgtNC45MDN2OC42NjQyaDQuOTAzYzEuNjkgMCAyLjk1OC0uMzM4MSAzLjg4OC0xLjA5ODl6IiBmaWxsPSIjMDAwMDAwIi8+PC9nPjwvc3ZnPg=="
                                                     style="height: auto; margin: 3px 0px; resize: none; position: relative; zoom: 1; display: block; width: 197.491px; top: 0px; left: 0px;">
                                             </div>
                                         </td>
@@ -1454,17 +1453,16 @@
                                                             style="font-style:italic;" data-style="txt_HDCD_SN"
                                                             data-label="txt_HDCD_SN">(TRANSFORM INVOICE FROM
                                                             E-INVOICE)</span></div>
-                                                    {{test}}
                                                     <div class="hoaDonGoc"> 
                                                     </div>
                                                 </div>
                                                 <div class="issuedDate"><span>Ngày</span><i
                                                         class="SONG_NGU pd0">(Date)</i><span class="pl7 pr7"
-                                                        style="font-weight: bold;">09</span><span>tháng</span><i
+                                                        style="font-weight: bold;">{{date.date}}</span><span>tháng</span><i
                                                         class="SONG_NGU pd0">(month)</i><span class="pl7 pr7"
-                                                        style="font-weight: bold;">03</span><span>năm</span><i
+                                                        style="font-weight: bold;">{{date.months}}</span><span>năm</span><i
                                                         class="SONG_NGU pd0">(year)</i><span class="pl7 pr7"
-                                                        style="font-weight: bold;">2024</span></div>
+                                                        style="font-weight: bold;">{{date.years}}</span></div>
                                             </div>
                                         </td>
                                         <td data-temp="Template_Code_Series_invoiceNumber" class="">
@@ -1484,14 +1482,14 @@
                                                         data-style="txt_invoiceNumber_SN"
                                                         data-label="txt_invoiceNumber_SN">(No.)</span><span
                                                         class="pr3">:</span><span class="eivNumber"
-                                                        data-val="txt_invoiceNumber">393508</span></div>
+                                                        data-val="txt_invoiceNumber">{{orderData.id}}</span></div>
                                             </div>
                                         </td>
                                     </tr>
                                     <tr>
                                         <td colspan="3" style="text-align:center;padding-bottom:3px;"><span
                                                 class="editable" data-style="txt-maHoaDon" data-label="txt-maHoaDon">Mã
-                                                của CQT: </span> 005FB5B50A42A245799779C50768FC7563</td>
+                                                của CQT: </span>{{orderData.id}}</td>
                                     </tr>
                                 </table>
                             </td>
@@ -1513,8 +1511,8 @@
                                                     <span class="colon">:</span>
                                                     <div class="colVal"><span class="styleChange onlyChangeStyle"
                                                             style="font-weight:bold;" data-style="sellerLegalNameStyle"
-                                                            data-val="txt_sellerLegalName">CÔNG TY TNHH THƯƠNG MẠI VÀ
-                                                            DỊCH VỤ KỸ THUẬT DIỆU PHÚC</span></div>
+                                                            data-val="txt_sellerLegalName">{{ seller.data.name }}</span>
+                                                    </div>
                                                 </div>
                                                 <div class="infoContainer" data-style="txt_sellerTaxCodeContainer">
                                                     <div class="colLabel"><span class="editable styleChange"
@@ -1525,7 +1523,9 @@
                                                             data-label="txt_sellerTaxCode_SN">(VAT code)</span></div>
                                                     <span class="colon">:</span>
                                                     <div class="colVal"><span class="maSoThue" style="font-weight:bold;"
-                                                            data-val="txt_sellerTaxCode">0316172372</span></div>
+                                                            data-val="txt_sellerTaxCode">{{ seller.data.taxCode
+                                                            }}</span>
+                                                    </div>
                                                 </div>
                                                 <div class="infoContainer" data-style="txt_sellerAddressLineContainer">
                                                     <div class="colLabel" onkeyup="drawDongKe(this)"><span
@@ -1537,9 +1537,8 @@
                                                             data-style="txt_sellerAddressLine_SN"
                                                             data-label="txt_sellerAddressLine_SN">(Address)</span></div>
                                                     <span class="colon">:</span>
-                                                    <div class="colVal"><span data-val="txt_sellerAddressLine">350-352
-                                                            Võ Văn Kiệt, Phường Cô Giang, Quận 1, Thành phố Hồ Chí
-                                                            Minh</span>
+                                                    <div class="colVal"><span data-val="txt_sellerAddressLine">
+                                                            {{ seller.data.address }}</span>
                                                         <div class="dottedLineContainer" data-line="sellerAddress_Line">
                                                             <span class="dottedLine styleChange"
                                                                 data-style="sellerAddress_Line"
@@ -1577,8 +1576,8 @@
                                                             data-style="txt_sellerPhoneNumber_SN"
                                                             data-label="txt_sellerPhoneNumber_SN">(Tel)</span></div>
                                                     <span class="colon">:</span>
-                                                    <div class="colVal"><span
-                                                            data-val="txt_sellerPhoneNumber">0976852529</span>
+                                                    <div class="colVal"><span data-val="txt_sellerPhoneNumber">{{
+                                                            seller.data.phone }}</span>
                                                         <div class="dottedLineContainer"
                                                             data-line="sellerPhoneNumber_Line"><span
                                                                 class="dottedLine styleChange"
@@ -1646,68 +1645,13 @@
                                                             data-style="txt_buyerDisplayName_SN"
                                                             data-label="txt_buyerDisplayName_SN">(Buyer)</span></div>
                                                     <span class="colon">:</span>
-                                                    <div class="colVal"><span data-val="txt_buyerDisplayName">Anh Hoàng
-                                                            Anh</span>
+                                                    <div class="colVal"><span
+                                                            data-val="txt_buyerDisplayName">{{customer.name}}</span>
                                                         <div class="dottedLineContainer"
                                                             data-line="buyerDisplayName_Line"><span
                                                                 class="dottedLine styleChange"
                                                                 data-style="buyerDisplayName_Line"
                                                                 style="top:17px;width:578px;left:138px;"></span></div>
-                                                    </div>
-                                                </div>
-                                                <div class="infoContainer" data-style="txt_buyerLegalNameContainer">
-                                                    <div class="colLabel" onkeyup="drawDongKe(this)"><span
-                                                            class="editable styleChange" data-style="txt_buyerLegalName"
-                                                            data-label="txt_buyerLegalName">Tên đơn vị</span><span
-                                                            class="SONG_NGU editable styleChange"
-                                                            style="font-style:italic;"
-                                                            data-style="txt_buyerLegalName_SN"
-                                                            data-label="txt_buyerLegalName_SN">(Company's name)</span>
-                                                    </div><span class="colon">:</span>
-                                                    <div class="colVal"><span data-val="txt_buyerLegalName"></span>
-                                                        <div class="dottedLineContainer"
-                                                            data-line="buyerLegalName_Line"><span
-                                                                class="dottedLine styleChange"
-                                                                data-style="buyerLegalName_Line"
-                                                                style="top:17px;width:649px;left:67px;"></span></div>
-                                                    </div>
-                                                </div>
-                                                <div class="infoContainer" data-style="txt_buyerTaxCodeContainer"
-                                                    style="width:55%;">
-                                                    <div class="colLabel" onkeyup="drawDongKe(this)"><span
-                                                            class="editable styleChange" data-style="txt_buyerTaxCode"
-                                                            data-label="txt_buyerTaxCode">Mã số thuế</span><span
-                                                            class="SONG_NGU editable styleChange"
-                                                            style="font-style:italic;" data-style="txt_buyerTaxCode_SN"
-                                                            data-label="txt_buyerTaxCode_SN">(Tax code)</span></div>
-                                                    <span class="colon">:</span>
-                                                    <div class="colVal"><span data-val="txt_buyerTaxCode"></span>
-                                                        <div class="dottedLineContainer" data-line="buyerTaxCode_Line">
-                                                            <span class="dottedLine styleChange"
-                                                                data-style="buyerTaxCode_Line"
-                                                                style="top:17px;width:325px;left:69px;"></span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="infoContainer sys extension styleChange dongKhongThangHang"
-                                                    style="width:45%;" data-style="txt_paymentMethodNameContainer"
-                                                    data-type="4">
-                                                    <div class="colLabel" onkeyup="drawDongKe(this)"><span
-                                                            class="editable styleChange"
-                                                            data-style="txt_paymentMethodName"
-                                                            data-label="txt_paymentMethodName">Hình thức thanh
-                                                            toán</span><span class="SONG_NGU editable styleChange"
-                                                            style="font-style:italic;"
-                                                            data-style="txt_paymentMethodName_SN"
-                                                            data-label="txt_paymentMethodName_SN">(Payment
-                                                            method)</span></div><span class="colon">:</span>
-                                                    <div class="colVal"><span data-val="Hình thức thanh toán"
-                                                            data-path="paymentMethodName">TM, CK</span>
-                                                        <div class="dottedLineContainer"
-                                                            data-line="paymentMethodName_Line"><span
-                                                                class="dottedLine styleChange"
-                                                                data-style="paymentMethodName_Line"
-                                                                style="top:17px;width:198px;left:125px;"></span></div>
                                                     </div>
                                                 </div>
                                                 <div class="infoContainer" data-style="txt_buyerAddressLineContainer">
@@ -1720,13 +1664,34 @@
                                                             data-style="txt_buyerAddressLine_SN"
                                                             data-label="txt_buyerAddressLine_SN">(Address)</span></div>
                                                     <span class="colon">:</span>
-                                                    <div class="colVal"><span data-val="txt_buyerAddressLine">VTI
-                                                            buildinh, Mễ Trì Hạ, Nam Từ Liêm, Hà Nội</span>
+                                                    <div class="colVal"><span
+                                                            data-val="txt_buyerAddressLine">{{customer.address}}</span>
                                                         <div class="dottedLineContainer" data-line="buyerAddress_Line">
                                                             <span class="dottedLine styleChange"
                                                                 data-style="buyerAddress_Line"
                                                                 style="top:17px;width:669px;left:47px;"></span>
                                                         </div>
+                                                    </div>
+                                                </div>
+                                                <div class="infoContainer sys extension styleChange dongKhongThangHang"
+                                                    style="width:100%;" data-style="txt_paymentMethodNameContainer"
+                                                    data-type="4">
+                                                    <div class="colLabel" onkeyup="drawDongKe(this)"><span
+                                                            class="editable styleChange"
+                                                            data-style="txt_paymentMethodName"
+                                                            data-label="txt_paymentMethodName">Hình thức thanh
+                                                            toán</span><span class="SONG_NGU editable styleChange"
+                                                            style="font-style:italic;"
+                                                            data-style="txt_paymentMethodName_SN"
+                                                            data-label="txt_paymentMethodName_SN">(Payment
+                                                            method)</span></div><span class="colon">:</span>
+                                                    <div class="colVal"><span data-val="Hình thức thanh toán"
+                                                            data-path="paymentMethodName">{{customer.payment}}</span>
+                                                        <div class="dottedLineContainer"
+                                                            data-line="paymentMethodName_Line"><span
+                                                                class="dottedLine styleChange"
+                                                                data-style="paymentMethodName_Line"
+                                                                style="top:17px;width:669px;left:125px;"></span></div>
                                                     </div>
                                                 </div>
                                                 <div class="infoContainer sys extension styleChange"
@@ -1798,11 +1763,6 @@
                                         data-style="colTenHang">Tên hàng hóa, dịch vụ</span><br><span
                                         class="SONG_NGU editable styleChange" style="font-style:italic"
                                         data-label="colTenHang_SN" data-style="colTenHang_SN">(Description)</span></th>
-                                <th style="width:60px" class="styleChange" data-style="colDVTContainer"><span
-                                        class="editable styleChange" style="font-weight:bold;" data-label="colDTV"
-                                        data-style="colDTV">Đơn vị tính</span><br><span
-                                        class="SONG_NGU editable styleChange" style="font-style:italic"
-                                        data-label="colDVT_SN" data-style="colDVT_SN">(Unit)</span></th>
                                 <th style="width:50px" class="styleChange" data-style="colSLContainer"><span
                                         class="editable styleChange" style="font-weight:bold;" data-label="colSL"
                                         data-style="colSL">Số lượng</span><br><span
@@ -1838,20 +1798,21 @@
                             </tr>
                         </thead>
                         <tbody>
+                            {{#each orderData.products}}
                             <tr class="item">
-                                <td class="text-center donghang">1</td>
+                                <td class="text-center donghang">{{@index}}</td>
                                 <td class="donghang " style="min-width:190px; max-width: 190px; word-wrap: break-word">
-                                    Tai nghe có khung trùm qua đầu hiệu JBL T770NCBLK- IMEI: TL1517-FN0107352<br></td>
-                                <td class="text-center donghang">Cái</td>
-                                <td class="text-right donghang">1</td>
-                                <td class="text-right donghang">2.663.636</td>
-                                <td class="text-right donghang" style="width: 110px;">2.663.636</td>
-                                <td class="text-right donghang">10%</td>
-                                <td class="text-right donghang">266.364</td>
-                                <td class="text-right donghang" style="width: 130px;">2.930.000</td>
+                                    {{ this.name }}<br></td>
+                                <td class="text-right donghang">{{ this.quantity }}</td>
+                                <td class="text-right donghang">{{ this.unitPrice }}</td>
+                                <td class="text-right donghang" style="width: 110px;">{{ this.priceBeforeVAT }}</td>
+                                <td class="text-right donghang">{{ this.VAT }}%</td>
+                                <td class="text-right donghang">{{ this.VAtprice }}</td>
+                                <td class="text-right donghang" style="width: 130px;">{{ this.Amount }}</td>
                             </tr>
+                            {{/each}}
                             <tr class="summary">
-                                <td class="borderTop" colspan="5" style="display: table-cell">
+                                <td class="borderTop" colspan="4" style="display: table-cell">
                                     <div class="infoContainer w99o" data-style="txt_totalContainer">
                                         <div class="text-right"><span class="editable styleChange"
                                                 data-style="txt_total" data-label="txt_total">Cộng tiền hàng</span><span
@@ -1861,10 +1822,13 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td class="borderTop text-right" colspan="" style="display: table-cell;">2.663.636</td>
+                                <td class="borderTop text-right" colspan="" style="display: table-cell;">{{
+                                    orderData.totalAmountBeforeVAT }}</td>
                                 <td class="borderTop text-right" colspan="" style="display: table-cell;"></td>
-                                <td class="borderTop text-right" colspan="" style="display: table-cell;">266.364</td>
-                                <td class="borderTop text-right" colspan="" style="display: table-cell;">2.930.000</td>
+                                <td class="borderTop text-right" colspan="" style="display: table-cell;">{{
+                                    orderData.totalVAtprice }}</td>
+                                <td class="borderTop text-right" colspan="" style="display: table-cell;">{{
+                                    orderData.total }}</td>
                             </tr>
                             <tr class="summary">
                                 <td class="borderTop" colspan="9">
@@ -1877,8 +1841,8 @@
                                                 data-style="txt_totalInWords_SN"
                                                 data-label="txt_totalInWords_SN">(Amount in words)</span></div><span
                                             class="colon">:</span>
-                                        <div class="colVal"><span class="readAmountInWords">Hai triệu chín trăm ba mươi
-                                                nghìn đồng</span>
+                                        <div class="colVal"><span
+                                                class="readAmountInWords">{{orderData.totalInWord}}</span>
                                             <div class="dottedLineContainer" data-line="totalInWords_Line"><span
                                                     class="dottedLine styleChange" data-style="totalInWords_Line"
                                                     style="top:17px;width:496px;left:225px;"></span><span
@@ -1958,8 +1922,8 @@
                                                 kasperskylab_antibanner="on"
                                                 src="data:image/gif;base64,R0lGODlhMgAmAPf/ALLiasrsj7HobtPtsanlUaLeVJ3YVm25MWO0MaznWZvcPuDx0ZHZFfv9+e753X3HIrnsfofQHaLbXrnmcpXbHYvJVrvmebTrbazkUYnKTL/nhPj88vP657Xhebfkca3lc5XaIdfuuqvfYqjeXZLWNJXbG43TMY7WFtzztK/mc7DpYa/mb6rmVIPLLYHKIHrEKnfCK3/JJ33HKIHKJoPMJXXALHzFKYXNJHO/LYbPI3G9LojQIm+7MJDWHozTII3VH4vSIY7WH4nRIZHXHZLYHWq3Mmi1NJPZHJPaHHjDIoLMH/D63/T7537HKP3++3zGKYnRInvFKIPNHYjQI5LZGZDXHKznVs/sp6fiW4nKRpXZJP3+/a/gbN/0vZPPUvT2863db8PojZHYHabjTq7jVfL568DofLTja6HeWdjuvXvDNbnUqY/TM6zmZ5PKbazkca7mcZLZHLvfnq7lbqDcYoLINJHKaJDZELHoc5PXMWi1M4zUFtLvoMnpn4nSGYbPHs3rpcLpg4vUGJbNdO7x7O/4593xx/P75fL57arZevf876nicK/mdqnibojPL+Xz1eX10LHpa6DdSa/oZaLdZNruy6rkTJ/dU9Pqxdvvwcfpl4fIS3K8NH/JInzGJYbKO37BSYjNMpvVVuLy0J7bV9bvr5/ScqLKi7Xfg7HodbbscOz33uH1vrDnb+b02KLbWaXdXXvGJM/qsKfiZYXOG3fDIs/umqjiZef11a7nYI3IXvT77L/ofPj79fn89ub2yH3IHrPjZZjZQsnevIzRN5vZVYTKM3G7RLTamrHpZ6zkb5DXFq/nbJvcMafbZZbZOZ/fRJLVPofONX/IK5XMben12YDJJ/f78/H55bbsb4PMIIHKJYPLKYO/YaHgR4XMLafjRpTXM6PdT6PhSajfWYjKQNXwqNjxq4HLIoLLI7HoceLq3bPpcZHYGZHYGsflqJPaGfv++Ov24Oz34/T67/L56JDTQZHSRa7kVcrqnIrQLozSK4jRGorTGITNHv///yH5BAEAAP8ALAAAAAAyACYAAAj/AP8JHEiwoMGDCBMqXMiwocOHEAv+CuAgosWFrMBZsbTkoseCKAhkU6EKQ8ePHkOqYHCnxAUMTFBaPMciAQMkSOBRuIDvkMyHfBKwWIYTJxUQL2P+XGgrAYFlcY5IldoORDIy5pYmDJBrzDIiYMOCdaelmRmtBwNNGndCzJC3cOFWmdAFbUFekbzt6cG3r98ewewWtCAAmqAgiBMrDjIhIYczACpe9MBOQb8fmDNr/mHBsTgIECSViujEgwAFfnyoXs3ah4aEisgxC5enDZbXDuMBEPCMH5DfwIMDCZPQyYhWUCIoL4BnxAaGDUSoIxEBipDr2LNrUshlxb4/O8LT/xKWqgAkhRtErCBBa0r49/B35FPYYQ4bfzny55diIsUlQAjtAgscJkih34EHXqFQH2hEo8QNEEZ4gzY3zHJLBwZh80oK+jwo4Yc3DLAQGMSgQ8OJKKKYjgukKONMPQOtIsEHjriQ4o0nirgQLqHM4OOPQM6wDTD2MGJACBtkIsEb33QSZJDchOBQNaLEYOWVWMZgzQPSvEHKPcU00sIDWWbZQhoQNYCKDGy26aYMTcQiAx2LUDKNJ0286aYxhlwkSx02BCrooE9EkUQtSUTxxKCMfjLKR4948cKklFZq6aWUlvMoSr4kAsOnoIYq6qgwZOGKVu+oUcOqrLbqaqsZyG5j1wIZ4GDrrbjmausm8wj2zzWm6CDssMQWW0Ehvg4kByc8NOvss81WUEayBFUCygHYZqutLvRQWxAi1BQh7rji2tGLtwchY4QeRrRrhBsNoIsQJscgYO8g8cqL0BendLPGFvoqtM4whARssEABAQA7">
                                             Signature Valid <br>
-                                            Ký bởi: CÔNG TY TNHH THƯƠNG MẠI VÀ DỊCH VỤ KỸ THUẬT DIỆU PHÚC<br>Ký ngày:
-                                            09/03/2024</div>
+                                            Ký bởi: {{ seller.data.name }}<br>Ký ngày:
+                                            {{ date }}</div>
                                     </a></div>
                             </td>
                         </tr>
