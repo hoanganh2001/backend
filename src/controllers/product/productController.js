@@ -229,10 +229,12 @@ productRoute.get('/promotional-product', async (req, res) => {
 
 productRoute.get('/product-detail/:id', (req, res) => {
   const productId = req.params.id;
-
   db.connect().then(async (connect) => {
     connect.execute(
-      `select pd.*,brands.name as brand_name from product_detail pd left join brands on pd.brand_id = brands.id where pd.id = ${productId}`,
+      `select pd.*,brands.name as brand_name, 
+      (SELECT LISTAGG(img.id||','||img.file_id, ';')  as file_id
+      FROM images img  where img.product_id = ${productId} group by img.product_id) as image
+      from product_detail pd left join brands on pd.brand_id = brands.id where pd.id = ${productId}`,
       {},
       { resultSet: true },
       (err, result) => {
@@ -247,18 +249,28 @@ productRoute.get('/product-detail/:id', (req, res) => {
           if (err) throw err;
           row = Object.fromEntries(
             Object.entries(row).map(([k, v]) => [k.toLowerCase(), v]),
-            Object.keys(row).forEach((key) => {
-              if (row[key]?.type?.columnTypeName.toLowerCase() === 'nclob') {
-                row[key].getData().then((value) => {
-                  row[key] = value;
-                });
-              }
-            }),
           );
-          res.json({ data: row });
-          // db.doRelease(connect);
-        }),
+          Object.keys(row).forEach((key) => {
+            if (row[key]?.type?.columnTypeName.toLowerCase() === 'nclob') {
+              row[key].getData().then((value) => {
+                row[key] = value;
+              });
+            }
+            if (key.toLowerCase() === 'image') {
+              console.log(row[key]);
+              row[key] = row[key]?.split(';').map((i) => {
+                const imgItem = i.split(',');
+                return {
+                  id: imgItem[0],
+                  file_id: imgItem[1],
+                };
+              });
+            }
+          }),
+            res.json({ data: row });
           db.doRelease(connect);
+          return;
+        });
       },
     );
   });
