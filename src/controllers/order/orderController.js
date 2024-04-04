@@ -45,6 +45,7 @@ orderRoute.post('/check-out', async (req, res) => {
       updateProduct += `INSERT INTO ORDERS_DETAIL(PRODUCT_ID,QUANTITY,PRICE,DISCOUNT,ORDER_ID) VALUES (${e.id},${e.quantity},${e.price},${e.discount},order_id);
       UPDATE PRODUCT_DETAIL pd SET pd.QUANTITY = pd.QUANTITY - ${e.quantity} where pd.id = ${e.id};`;
     });
+    bindValue.push({ type: oracledb.NUMBER, dir: oracledb.BIND_OUT });
     const query = `
     DECLARE
       order_id number;
@@ -55,7 +56,6 @@ orderRoute.post('/check-out', async (req, res) => {
       :id := order_id;
       ${updateProduct}
     end;`;
-    bindValue['id'] = { type: oracledb.NUMBER, dir: oracledb.BIND_OUT };
     connect.execute(query, bindValue, { autoCommit: true }, (err, result) => {
       if (err) {
         console.log(err);
@@ -63,7 +63,13 @@ orderRoute.post('/check-out', async (req, res) => {
         db.doRelease(connect);
         return;
       }
-      res.status(200).json({ message: result, isLogIn: !!id, isSuccess: true });
+      const orderId = result.outBinds[0];
+      res.status(200).json({
+        message: 'Bạn đã đặt hàng thành công!',
+        isLogIn: !!id,
+        isSuccess: true,
+        orderId: orderId,
+      });
       db.doRelease(connect);
     });
   });
