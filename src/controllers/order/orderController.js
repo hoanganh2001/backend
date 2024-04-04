@@ -3,6 +3,7 @@ const db = require('../../config/db');
 const oracledb = require('oracledb');
 const jwt = require('jsonwebtoken');
 const config = require('../../config/auth');
+const uploadGGDr = require('../../services/uploadGGDr.service');
 
 oracledb.fetchAsString = [oracledb.CLOB];
 
@@ -96,13 +97,12 @@ orderRoute.get('/order', async (req, res) => {
     },
   );
   const query = `
-  SELECT o.ID, o.NAME, o.PHONE_NUMBER, o.EMAIL, o.USER_ID, o.ADDRESS, o.NOTE, o.COUPON, o.CREATE_DATE, o.UPDATE_DATE, o.PAYMENT, s.name as STATUS, 
+  SELECT o.ID, o.NAME, o.PHONE_NUMBER, o.EMAIL, o.USER_ID, o.ADDRESS, o.NOTE, o.COUPON, o.CREATE_DATE, o.UPDATE_DATE, o.PAYMENT, s.name as STATUS, o.INVOICE, 
   (select listagg(od.product_id || '--' || pd.name || '--' || im.file_id || '--' || od.quantity || '--' || od.price || '--' || od.discount , ';') within group (order by od.product_id) "product" from ORDERS_DETAIL od left join product_detail pd on od.product_id = pd.id LEFT JOIN images im ON pd.thumbnail= im.id where od.order_id = o.id) as product 
   FROM ORDERS o
   LEFT JOIN STATUS s ON o.status= s.id
   WHERE o.user_id = ${id}
   ORDER BY o.CREATE_DATE desc`;
-  console.log(query);
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
@@ -181,25 +181,37 @@ orderRoute.post('/order/cancel', async (req, res) => {
         return;
       }
       if (result.rowsAffected === 1) {
-        res.json({ message: 'success' });
+        res.status(200).json({ message: 'success' });
       } else {
-        res.json({ message: 'something wrong' });
+        res.status(500).json({ message: 'something wrong' });
       }
       db.doRelease(connect);
     });
   });
 });
-async function getTemplateHtml() {
-  console.log('Loading template file in memory');
-  try {
-    const invoicePath = path.resolve('./invoice-template.html');
-    return await readFile(invoicePath, 'utf8');
-  } catch (err) {
-    console.log(err);
-    return Promise.reject('Could not load html template');
-  }
-}
 
-orderRoute.get('/order/invoice', async (req, res) => {});
+orderRoute.get('/order/invoice/:id', async (req, res) => {
+  const invoiceID = req.params.id;
+  const session_id = req.cookies.SessionID;
+
+  if (!session_id) {
+    return res.status(400).json({
+      message: 'Please login!',
+    });
+  }
+  db.connect().then(async (connect) => {
+    const result = await connect.execute(
+      `Select file_id from invoices where id = ${invoiceID}`,
+    );
+
+    const fileId = result.rows[0].FILE_ID;
+
+    const file = await uploadGGDr.exportPdf(fileId);
+
+    const base64 = Buffer.from(await file.arrayBuffer()).toString('base64');
+    const iframe = `<iframe src=data:application/pdf;base64,${base64} width=100% height=100%></iframe>`;
+    res.status(200).json({ data: iframe });
+  });
+});
 
 module.exports = orderRoute;

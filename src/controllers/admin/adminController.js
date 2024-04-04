@@ -709,7 +709,7 @@ adminRoute.put('/order/:id/invoice', async (req, res) => {
         UPDATE ORDERS SET invoice = invoice_id where id = ${orderID};
         End;`;
         await connect.execute(updateInvoicequery, {}, { autoCommit: true });
-        res.status(200).json({ message: 'Success!' });
+        res.status(200).json({ message: 'Created invoice successful!' });
         db.doRelease(connect);
         return;
       } catch (err) {

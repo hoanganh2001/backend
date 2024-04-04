@@ -93,5 +93,29 @@ deleteFile = async (fileList) => {
   );
 };
 
-const uploadFile = { upload, deleteFile, uploadOrder };
+exportPdf = async (fileId) => {
+  // Get credentials and build service
+  // TODO (developer) - Use appropriate auth mechanism for your app
+  const auth = new google.auth.GoogleAuth({
+    keyFile: 'ggKey.json',
+    scopes: ['https://www.googleapis.com/auth/drive'],
+  });
+  const service = google.drive({ version: 'v3', auth });
+
+  try {
+    const file = await service.files.get({
+      fileId: fileId,
+      alt: 'media',
+    });
+    const fileName = await service.files.get({
+      fileId: fileId,
+      fields: 'name',
+    });
+    return file.data;
+  } catch (err) {
+    throw err;
+  }
+};
+
+const uploadFile = { upload, deleteFile, uploadOrder, exportPdf };
 module.exports = uploadFile;
