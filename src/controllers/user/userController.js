@@ -9,7 +9,6 @@ var jwt = require('jsonwebtoken');
 const speakeasy = require('speakeasy');
 const sendEmail = require('../../utils/sendEmails');
 
-var bcrypt = require('bcryptjs');
 const oracledb = require('oracledb');
 
 oracledb.fetchAsString = [oracledb.CLOB];

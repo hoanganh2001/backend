@@ -18,7 +18,7 @@ const sendEmail = async (options) => {
   const transporter = nodeMailer.createTransport(mailConfig);
 
   const mailOptions = {
-    from: '3KSHOP <no-reply>',
+    from: '3KSHOP <kshop9175@gmail.com>',
     to: options.to,
     subject: options.subject,
     html: options.message,
