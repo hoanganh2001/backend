@@ -13,6 +13,7 @@ const newsRoute = require('./controllers/new/newController');
 const userRoute = require('./controllers/user/userController');
 const orderRoute = require('./controllers/order/orderController');
 const adminRoute = require('./controllers/admin/adminController');
+const searchRoute = require('./controllers/search/searchController');
 
 db.createPool();
 const corsOptions = {
@@ -29,6 +30,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use('/api', productRoute);
+app.use('/api', searchRoute);
 app.use('/api', brandRoute);
 app.use('/api', categoryRoute);
 app.use('/api', newsRoute);
