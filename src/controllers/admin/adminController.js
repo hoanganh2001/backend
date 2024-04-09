@@ -13,7 +13,6 @@ const handlebars = require('handlebars');
 const readFile = utils.promisify(fs.readFile);
 const formatNumber = require('../../utils/formatNumber');
 
-
 function getQueryString(
   params,
   logicOnly,
@@ -592,15 +591,34 @@ adminRoute.put('/order/:id/confirm', async (req, res) => {
     const status = await connect.execute(query, {});
     if (status.rows[0].STATUS === 1) {
       const updateQuery = `update orders set status = 5, update_date = '${update_date}' where id = ${orderID}`;
-      connect.execute(updateQuery, {}, { autoCommit: true }, (err, result) => {
-        if (err) {
-          res.status(500).json({ message: err | 'Error getting data from DB' });
+      connect.execute(
+        updateQuery,
+        {},
+        { autoCommit: true },
+        async (err, result) => {
+          if (err) {
+            res
+              .status(500)
+              .json({ message: err | 'Error getting data from DB' });
+            db.doRelease(connect);
+            return;
+          }
+          const getQuery = `SELECT o.*,
+        (select listagg ('id|' || od.product_id || ',' || 'name|' ||  pd.name || ',' || 'image|' || im.file_id || ',' || 'quantity|' || od.quantity || ',' || 'price|' || od.price || ',' || 'discount|' || od.discount ,';') within group (order by od.product_id) "product" 
+        from ORDERS_DETAIL od left join product_detail pd on od.product_id = pd.id left join images im on pd.thumbnail = im.id
+        where od.order_id = o.id) as product 
+        from orders o where id = 43`;
+          const orderResult = await connect.execute(getQuery);
+          const sendInvoiceResult = await sendInvoice(orderResult);
+          if (!sendInvoiceResult) {
+            res.status(500).json({ message: 'Status is not satisfy!' });
+            db.doRelease(connect);
+            return;
+          }
+          res.status(200).json({ message: 'success', isSuccess: true });
           db.doRelease(connect);
-          return;
-        }
-        res.status(200).json({ message: 'success', isSuccess: true });
-        db.doRelease(connect);
-      });
+        },
+      );
     } else {
       res.status(500).json({ message: 'Status is not satisfy!' });
       db.doRelease(connect);
@@ -650,15 +668,23 @@ adminRoute.put('/order/:id/success', async (req, res) => {
     const status = await connect.execute(query, {});
     if (status.rows[0].STATUS === 2) {
       const updateQuery = `update orders set status = 3, update_date = '${update_date}' where id = ${orderID}`;
-      connect.execute(updateQuery, {}, { autoCommit: true }, (err, result) => {
-        if (err) {
-          res.status(500).json({ message: err | 'Error getting data from DB' });
+      connect.execute(
+        updateQuery,
+        {},
+        { autoCommit: true },
+        async (err, result) => {
+          if (err) {
+            res
+              .status(500)
+              .json({ message: err | 'Error getting data from DB' });
+            db.doRelease(connect);
+            return;
+          }
+
+          res.status(200).json({ message: 'success' });
           db.doRelease(connect);
-          return;
-        }
-        res.status(200).json({ message: 'success' });
-        db.doRelease(connect);
-      });
+        },
+      );
     } else {
       res.status(500).json({ message: 'Status is not satisfy!' });
       db.doRelease(connect);
@@ -746,24 +772,31 @@ adminRoute.put('/order/:id/cancel', async (req, res) => {
     const result = await connect.execute(query, {});
     if (result.rows[0].STATUS !== 3 || result.rows[0].STATUS !== 4) {
       const updateQuery = `update orders set status = 4, update_date = '${update_date}', note = '${note}' where id = ${orderID}`;
-      connect.execute(updateQuery, {}, { autoCommit: true }, async (err, result) => {
-        if (err) {
-          res.status(500).json({ message: err | 'Error getting data from DB' });
+      connect.execute(
+        updateQuery,
+        {},
+        { autoCommit: true },
+        async (err, result) => {
+          if (err) {
+            res
+              .status(500)
+              .json({ message: err | 'Error getting data from DB' });
+            db.doRelease(connect);
+            return;
+          }
+          res.status(200).json({ message: 'success' });
+          const userData = result.rows[0];
+          await sendEmail({
+            to: userData.EMAIL,
+            subject: 'Order success',
+            message: `<p>Hi, ${userData.NAME}</p><p>Đơn hàng ${userData.ID} của bạn đã bị hủy </p><p>Lý do: ${note}</p><p>Xin lỗi vì sự bất tiện này.</p><p>Thân ái,</p><p>3kShop</p>`,
+          }).catch((err) => {
+            console.log(err);
+            throw err;
+          });
           db.doRelease(connect);
-          return;
-        }
-        res.status(200).json({ message: 'success' });
-        const userData = result.rows[0];
-        await sendEmail({
-          to: userData.EMAIL,
-          subject: 'Order success',
-          message: `<p>Hi, ${userData.NAME}</p><p>Đơn hàng ${userData.ID} của bạn đã bị hủy </p><p>Lý do: ${note}</p><p>Xin lỗi vì sự bất tiện này.</p><p>Thân ái,</p><p>3kShop</p>`,
-        }).catch((err) => {
-          console.log(err);
-          throw err;
-        });
-        db.doRelease(connect);
-      });
+        },
+      );
     } else {
       res.status(200).json({ message: 'Status is not satisfy!' });
       db.doRelease(connect);
@@ -1121,63 +1154,58 @@ adminRoute.put('/user/change-password/:id', async (req, res) => {
   return;
 });
 
-adminRoute.get('/test', async (req, res) => {
+async function sendInvoice(result) {
   try {
-    const getQuery = `SELECT o.*,
-      (select listagg ('id|' || od.product_id || ',' || 'name|' ||  pd.name || ',' || 'image|' || im.file_id || ',' || 'quantity|' || od.quantity || ',' || 'price|' || od.price || ',' || 'discount|' || od.discount ,';') within group (order by od.product_id) "product" 
-      from ORDERS_DETAIL od left join product_detail pd on od.product_id = pd.id left join images im on pd.thumbnail = im.id
-      where od.order_id = o.id) as product 
-      from orders o where id = 43`;
-    db.connect().then(async (connect)=>{
-      const result = await connect.execute(getQuery)
-      const order = result.rows.map((item) => {
-        item.PRODUCT = item.PRODUCT.split(';').map((t) =>
-          Object.fromEntries(
-            t.split(',').map((e) => {
-              return e.split('|').map((i) => {
-                return isNaN(+i) ? i : i ? +i : null;
-              });
-            }),
-          ),
-          );
-        item['create_date'] = dayjs(item['create_date']).format('DD/MM/YYYY HH:mm:ss')
-        item['total'] = 0;
-        item.PRODUCT.forEach(t=>{
-          t.image = (t.image?.includes('/')
-          ? 'https://3kshop.vn/wp-content/uploads/fly-images/'
-          : 'https://drive.google.com/thumbnail?id=') + t.image
-          item['total'] += (t.quantity * t.price) * (t.discount ? (1 - t.discount / 100) : 1)
-          if(t.discount) {
-            t['newPrice'] = formatNumber((t.price * (1 - t.discount / 100)),',');
-          }
-          t.price = formatNumber(t.price,',')
-        })
-        item['total'] = formatNumber(item['total'], ',');
-        return Object.fromEntries(
-          Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
-        );
-      })[0];
-      const data = order;
-      const html = await readFile('./index.html', { encoding: 'utf-8' });
-      const template = handlebars.compile(html);
-      const htmlToSend = template(data);
-      await sendEmail({
-        to: 'abceok8@gmail.com',
-        subject: 'Order success',
-        html: htmlToSend,
-      }).catch((err) => {
-        console.log(err);
-        throw err;
+    const order = result.rows.map((item) => {
+      item.PRODUCT = item.PRODUCT.split(';').map((t) =>
+        Object.fromEntries(
+          t.split(',').map((e) => {
+            return e.split('|').map((i) => {
+              return isNaN(+i) ? i : i ? +i : null;
+            });
+          }),
+        ),
+      );
+      item['create_date'] = dayjs(item['create_date']).format(
+        'DD/MM/YYYY HH:mm:ss',
+      );
+      item['total'] = 0;
+      item.PRODUCT.forEach((t) => {
+        t.image =
+          (t.image?.includes('/')
+            ? 'https://3kshop.vn/wp-content/uploads/fly-images/'
+            : 'https://drive.google.com/thumbnail?id=') + t.image;
+        item['total'] +=
+          t.quantity * t.price * (t.discount ? 1 - t.discount / 100 : 1);
+        if (t.discount) {
+          t['newPrice'] = formatNumber(t.price * (1 - t.discount / 100), ',');
+        }
+        t.price = formatNumber(t.price, ',');
       });
-      res.status(200).send(htmlToSend);
-      db.doRelease(connect);
-      return;
-    })
+      item['total'] = formatNumber(item['total'], ',');
+      return Object.fromEntries(
+        Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
+      );
+    })[0];
+    const data = order;
+    const html = await readFile('./index.html', { encoding: 'utf-8' });
+    const template = handlebars.compile(html);
+    const htmlToSend = template(data);
+    console.log(123);
+
+    await sendEmail({
+      to: 'hoanganh2001hs@gmail.com',
+      subject: 'Bạn đã đặt hàng thành công',
+      message: htmlToSend,
+    }).catch((err) => {
+      console.log(err);
+      throw err;
+    });
+    return true;
   } catch (err) {
     res.status(500).json({ message: 'Internal Server Error!' });
-    db.doRelease(connect);
-    return;
+    return false;
   }
-});
+}
 
 module.exports = adminRoute;
