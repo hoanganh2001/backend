@@ -30,9 +30,19 @@ function getQueryString(
     switch (keyDetail?.type) {
       case 'logic':
         if (where.length === 0 && !haveDefaultLogic) {
-          where += `where ${generateWhereLogicQuery(keyDetail, params, t)} `;
+          where += `where ${generateWhereLogicQuery(
+            keyDetail,
+            params,
+            t,
+            table,
+          )} `;
         } else {
-          where += `and ${generateWhereLogicQuery(keyDetail, params, t)} `;
+          where += `and ${generateWhereLogicQuery(
+            keyDetail,
+            params,
+            t,
+            table,
+          )} `;
         }
         break;
       case 'page':
@@ -71,7 +81,7 @@ function getQueryString(
   return where + sort + ' ' + page;
 }
 
-function generateWhereLogicQuery(keyDetail, paramsList, param) {
+function generateWhereLogicQuery(keyDetail, paramsList, param, table) {
   if (keyDetail?.compare === 'text') {
     return param.includes('category')
       ? `pd.id in (select product_detail_id from product_category where ${param.replace(
@@ -82,11 +92,13 @@ function generateWhereLogicQuery(keyDetail, paramsList, param) {
             ? 'categories'
             : param.replace('_name', 's')
         } where name like '%${paramsList[param]}%'))`
-      : `LOWER(pd.${param}) like '%${paramsList[param].toLowerCase()}%'`;
+      : `LOWER(${table ? table + '.' : ''}${param}) like '%${paramsList[
+          param
+        ].toLowerCase()}%'`;
   }
   if (keyDetail?.compare === 'number') {
     if (param === 'id')
-      return `pd.id ${
+      return `${table ? table + '.' : ''}id ${
         Array.isArray(paramsList[param])
           ? `in (${paramsList[param]})`
           : `= ${paramsList[param]}`
@@ -138,7 +150,7 @@ adminRoute.get('/products', async (req, res) => {
   db.connect().then(async (connect) => {
     const query =
       `SELECT * FROM product_detail pd left join product_list pl on pd.id= pl.id ` +
-      getQueryString(req.query);
+      getQueryString(req.query, null, null, null, 'pd');
     const lengthQuery =
       `SELECT count(pd.id) as length FROM product_detail pd ` +
       getQueryString(req.query, true);
@@ -469,17 +481,20 @@ adminRoute.get('/categories', async (req, res) => {
       from categories c 
       left join category_type ct on c.id = ct.category_id 
       left join category_feature cf on c.id = cf.category_id 
-      group by c.id,c.name
-      ` + getQueryString(req.query, null, null, true);
+      ` +
+      getQueryString(req.query, null, null, true, 'c').replace(
+        'ORDER',
+        'group by c.id, c.name ORDER',
+      );
     const lengthQuery =
-      `SELECT count(c.id) as length from categories c` +
+      `SELECT count(id) as length from categories ` +
       getQueryString(req.query, true);
+    console.log(query);
     const length = await (
       await connect.execute(lengthQuery, {})
     ).rows[0].LENGTH;
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        console.log(err);
         res
           .status(500)
           .json({ message: err.Error | 'Error getting data from DB' });
@@ -529,12 +544,12 @@ adminRoute.get('/categories', async (req, res) => {
 adminRoute.get('/orders', async (req, res) => {
   db.connect().then(async (connect) => {
     const query =
-      `SELECT o.*, s.name as status_name,
+      `SELECT o.*, s.name as status_name, c.value as coupon_value, c.unit as coupon_unit,
       (select listagg ('id|' || od.product_id || ',' || 'name|' ||  pd.name || ',' || 'image|' || im.file_id || ',' || 'quantity|' || od.quantity || ',' || 'price|' || od.price || ',' || 'discount|' || od.discount ,';') within group (order by od.product_id) "product" 
       from ORDERS_DETAIL od left join product_detail pd on od.product_id = pd.id left join images im on pd.thumbnail = im.id
       where od.order_id = o.id) as product 
-      from orders o left join status s on o.status = s.id
-      ` + getQueryString(req.query);
+      from orders o left join status s on o.status = s.id left join coupon c on o.coupon = c.id
+      ` + getQueryString(req.query, null, null, null, 'o');
     const lengthQuery =
       `SELECT count(o.id) as length FROM orders o ` +
       getQueryString(req.query, true);
@@ -603,11 +618,11 @@ adminRoute.put('/order/:id/confirm', async (req, res) => {
             db.doRelease(connect);
             return;
           }
-          const getQuery = `SELECT o.*,
+          const getQuery = `SELECT o.*, c.value as coupon_value, c.unit as coupon_unit,
         (select listagg ('id|' || od.product_id || ',' || 'name|' ||  pd.name || ',' || 'image|' || im.file_id || ',' || 'quantity|' || od.quantity || ',' || 'price|' || od.price || ',' || 'discount|' || od.discount ,';') within group (order by od.product_id) "product" 
         from ORDERS_DETAIL od left join product_detail pd on od.product_id = pd.id left join images im on pd.thumbnail = im.id
         where od.order_id = o.id) as product 
-        from orders o where id = 43`;
+        from orders o left join coupon c on o.coupon = c.id where o.id = ${orderID}`;
           const orderResult = await connect.execute(getQuery);
           const sendInvoiceResult = await sendInvoice(orderResult);
           if (!sendInvoiceResult) {
@@ -1170,6 +1185,9 @@ async function sendInvoice(result) {
         'DD/MM/YYYY HH:mm:ss',
       );
       item['total'] = 0;
+      item['coupon'] = item['coupon']
+        ? formatNumber(t.price, ',') + item['coupon_unit']
+        : null;
       item.PRODUCT.forEach((t) => {
         t.image =
           (t.image?.includes('/')
@@ -1192,7 +1210,6 @@ async function sendInvoice(result) {
     const template = handlebars.compile(html);
     const htmlToSend = template(data);
     console.log(123);
-
     await sendEmail({
       to: 'hoanganh2001hs@gmail.com',
       subject: 'Bạn đã đặt hàng thành công',
@@ -1203,8 +1220,8 @@ async function sendInvoice(result) {
     });
     return true;
   } catch (err) {
-    res.status(500).json({ message: 'Internal Server Error!' });
-    return false;
+    console.log(err);
+    return err;
   }
 }
 

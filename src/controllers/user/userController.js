@@ -10,6 +10,7 @@ const speakeasy = require('speakeasy');
 const sendEmail = require('../../utils/sendEmails');
 
 const oracledb = require('oracledb');
+const dayjs = require('dayjs');
 
 oracledb.fetchAsString = [oracledb.CLOB];
 
@@ -18,7 +19,7 @@ userRoute.post('/login', (req, res) => {
     const sqlQuery = `Select ua.*, r.name as role from user_account ua left join role r on ua.role_id = r.id where ua.name = '${req.body.username}'`;
     connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        res.status(500).json({ message: 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -59,6 +60,7 @@ userRoute.post('/login', (req, res) => {
             connect.execute(updateQuery, {}, { autoCommit: true });
             res.json({
               status: 'success',
+              isSuccess: true,
               message: 'You have successfully logged in.',
               role: row.role,
             });
@@ -69,7 +71,7 @@ userRoute.post('/login', (req, res) => {
             });
           }
         } else {
-          res.json({ message: 'fail' });
+          res.json({ message: 'Username không tồn tại!' });
         }
         db.doRelease(connect);
         return;
@@ -188,12 +190,12 @@ userRoute.get('/active-account', (req, res) => {
 userRoute.get('/my-profile', [authMiddleware.verifyToken], (req, res) => {
   const id = req.userId;
   db.connect().then(async (connect) => {
-    const sqlQuery = `Select ud.*,ua.email as email from user_detail ud left join user_account ua on ud.user_id = ua.id where ud.user_id = ${id}`;
+    const sqlQuery = `Select ua.name, ua.address, ua.phone ,ua.email as email from user_account ua where ua.id = ${id}`;
     connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
       if (err) {
         res
           .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+          .json({ message: err.message | 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -229,37 +231,37 @@ userRoute.post(
     const id = req.userId;
     let passMessage = '';
     db.connect().then(async (connect) => {
-      const checkUser = `SELECT * FROM USER_DETAIL WHERE USER_ID = :id`;
+      const checkUser = `SELECT * FROM user_account WHERE ID = :id`;
       connect.execute(checkUser, [id], (err, result) => {
         if (err) {
           res
             .status(500)
-            .json({ message: err.message | 'Error getting data from DB' });
+            .json({ message: err.message | 'Internal Server Error' });
           db.doRelease(connect);
           return;
         }
-        if (req.body.old_password && req.body.new_password) {
-          const changePass = `update user_account set password = '${req.body.new_password}' where id = ${id} and password like '${req.body.old_password}'`;
-          connect.execute(
-            changePass,
-            {},
-            { autoCommit: true },
-            (err, result) => {
-              if (err) {
-                res.status(500).json({
-                  message: err.message | 'Error getting data from DB',
-                });
-                db.doRelease(connect);
-                return;
-              }
-              passMessage =
-                result.rowsAffected === 1
-                  ? 'change pass success!'
-                  : 'Wrong Old pass!';
-            },
-          );
-        }
         if (result.rows.length > 0) {
+          if (req.body.old_password && req.body.new_password) {
+            const changePass = `update user_account set password = '${req.body.new_password}' where id = ${id} and password like '${req.body.old_password}'`;
+            connect.execute(
+              changePass,
+              {},
+              { autoCommit: true },
+              (err, result) => {
+                if (err) {
+                  res.status(500).json({
+                    message: err.message | 'Internal Server Error',
+                  });
+                  db.doRelease(connect);
+                  return;
+                }
+                passMessage =
+                  result.rowsAffected === 1
+                    ? 'change pass success!'
+                    : 'Wrong Old pass!';
+              },
+            );
+          }
           let info = '';
           const body = req.body;
           Object.keys(body).forEach((t) => {
@@ -270,7 +272,7 @@ userRoute.post(
           });
           const updateInfo = `
             BEGIN
-              update user_detail set ${info} WHERE USER_ID = ${id};
+              update USER_ACCOUNT set ${info} WHERE ID = ${id};
               UPDATE USER_ACCOUNT SET EMAIL = '${req.body.email}' WHERE ID = ${id} AND EMAIL NOT LIKE '${req.body.email}';
             END;`;
           connect.execute(
@@ -279,6 +281,7 @@ userRoute.post(
             { autoCommit: true },
             (err, result) => {
               if (err) {
+                console.log(err);
                 res
                   .status(500)
                   .json({ message: 'Error saving employee to DB' });
@@ -294,30 +297,11 @@ userRoute.post(
             },
           );
         } else {
-          const insertQuery = `BEGIN
-              INSERT INTO USER_DETAIL (NAME, ADDRESS, PHONE, USER_ID) VALUES(:name,:address,:phone,:id);
-              UPDATE USER_ACCOUNT SET EMAIL = '${req.body.email}' WHERE ID = ${id} AND EMAIL NOT LIKE '${req.body.email}';
-            END;`;
-          connect.execute(
-            insertQuery,
-            [req.body.name, req.body.address, req.body.phone, id],
-            { autoCommit: true },
-            (err, result) => {
-              if (err) {
-                res
-                  .status(500)
-                  .json({ message: 'Error saving employee to DB' });
-                db.doRelease(connect);
-                return;
-              }
-              res.json({
-                message: 'success update info!',
-                password: passMessage,
-              });
-              db.doRelease(connect);
-              return;
-            },
-          );
+          res
+            .status(500)
+            .json({ message: err.message | 'Internal Server Error' });
+          db.doRelease(connect);
+          return;
         }
       });
     });
@@ -332,7 +316,7 @@ userRoute.get('/account-role', [authMiddleware.verifyToken], (req, res) => {
       if (err) {
         res
           .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+          .json({ message: err.message | 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -359,12 +343,12 @@ userRoute.post('/sendOTP', async (req, res) => {
     db.connect().then(async (connect) => {
       const query = `select id from user_account where email = '${email}'`;
       const result = await connect.execute(query, {});
-      const id = result.rows[0].ID;
-      if (!id) {
+      if (!result.rows.length > 0) {
         res.status(404).json({ message: 'Email is not exist!', type: 'fail' });
         db.doRelease(connect);
         return;
       }
+      const id = result.rows[0].ID;
       const secret = speakeasy.generateSecret({ length: 6 });
 
       // Generate a TOTP code using the secret key
@@ -376,7 +360,8 @@ userRoute.post('/sendOTP', async (req, res) => {
         // encoding format for the secret key
         encoding: 'base32',
       });
-      const updateQuery = `update user_account set otp = '${otp}' where id = ${id}`;
+      const currentDate = dayjs().add(1, 'minutes').toISOString();
+      const updateQuery = `update user_account set otp = '${otp}', OTP_EXPIRED_DATE = '${currentDate}' where id = ${id}`;
       const updateResult = await connect.execute(
         updateQuery,
         {},
@@ -399,22 +384,6 @@ userRoute.post('/sendOTP', async (req, res) => {
         throw err;
       });
       res.status(200).json({ success: true, message: 'OTP sent successfully' });
-
-      setTimeout(async () => {
-        const updateQuery = `update user_account set otp = null where id = ${verifyOTP.rows[0].ID}`;
-        const updateResult = await connect.execute(
-          updateQuery,
-          {},
-          { autoCommit: true },
-        );
-        if (updateResult.rowsAffected !== 1) {
-          res
-            .status(500)
-            .json({ success: false, message: 'Internal server error' });
-          db.doRelease(connect);
-          return;
-        }
-      }, 60000);
       db.doRelease(connect);
       return;
     });
@@ -429,10 +398,15 @@ userRoute.post('/verifyOTP', (req, res) => {
   const { email, otp } = req.body;
   db.connect().then(async (connect) => {
     try {
-      const sqlQuery = `Select id,otp from user_account where email = '${email}'`;
+      const sqlQuery = `Select id,otp, otp_expired_date from user_account where email = '${email}'`;
       const verifyOTP = await connect.execute(sqlQuery, {});
       if (otp !== verifyOTP.rows[0].OTP) {
         res.status(500).json({ message: 'Wrong otp!' });
+        db.doRelease(connect);
+        return;
+      }
+      if (dayjs().isAfter(dayjs(verifyOTP.rows[0].OTP_EXPIRED_DATE))) {
+        res.status(500).json({ message: 'OTP has been expired!' });
         db.doRelease(connect);
         return;
       }

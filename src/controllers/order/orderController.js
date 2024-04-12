@@ -4,6 +4,7 @@ const oracledb = require('oracledb');
 const jwt = require('jsonwebtoken');
 const config = require('../../config/auth');
 const uploadGGDr = require('../../services/uploadGGDr.service');
+const dayjs = require('dayjs');
 
 oracledb.fetchAsString = [oracledb.CLOB];
 
@@ -41,6 +42,20 @@ orderRoute.post('/check-out', async (req, res) => {
         .json({ message: 'Có sản phẩm không đủ số lượng hoặc đã hết!' });
       return;
     }
+    if (req.body.coupon) {
+      const couponCheck = await connect.execute(
+        `UPDATE coupon SET quantity = QUANTITY - 1 where id = ${req.body.coupon} and quantity > 0`,
+        {},
+        { autoCommit: true },
+      );
+      if (couponCheck.rowsAffected === 0) {
+        res.status(500).json({
+          message: 'Có lỗi khi áp dụng mã giảm giá! Vui lòng thử lại!',
+        });
+        db.doRelease(connect);
+        return;
+      }
+    }
     let updateProduct = '';
     product.forEach((e) => {
       updateProduct += `INSERT INTO ORDERS_DETAIL(PRODUCT_ID,QUANTITY,PRICE,DISCOUNT,ORDER_ID) VALUES (${e.id},${e.quantity},${e.price},${e.discount},order_id);
@@ -51,8 +66,8 @@ orderRoute.post('/check-out', async (req, res) => {
     DECLARE
       order_id number;
     begin
-      INSERT INTO ORDERS(USER_ID,NAME,ADDRESS,EMAIL,PHONE_NUMBER,NOTE,PAYMENT,COUPON,CREATE_DATE,STATUS)
-      VALUES(${id}, :name, :address,:email,:phone_number,:note,:payment,:coupon,:create_date,1)
+      INSERT INTO ORDERS(USER_ID,NAME,ADDRESS,EMAIL,PHONE_NUMBER,NOTE,PAYMENT,COUPON,CREATE_DATE,Amount,STATUS)
+      VALUES(${id}, :name, :address,:email,:phone_number,:note,:payment,:coupon,:create_date,:amount,1)
       returning id into order_id;
       :id := order_id;
       ${updateProduct}
@@ -96,16 +111,18 @@ orderRoute.get('/order', async (req, res) => {
       return decoded.id;
     },
   );
-  const query = `
-  SELECT o.ID, o.NAME, o.PHONE_NUMBER, o.EMAIL, o.USER_ID, o.ADDRESS, o.NOTE, o.COUPON, o.CREATE_DATE, o.UPDATE_DATE, o.PAYMENT, s.name as STATUS, o.INVOICE, 
+  const query = `SELECT o.ID, o.NAME, o.PHONE_NUMBER, o.EMAIL, o.USER_ID, o.ADDRESS, o.NOTE, o.COUPON, o.CREATE_DATE, o.UPDATE_DATE, o.PAYMENT, s.name as STATUS, o.INVOICE, o.amount, c.value as coupon_value, c.unit as coupon_unit,
   (select listagg(od.product_id || '--' || pd.name || '--' || im.file_id || '--' || od.quantity || '--' || od.price || '--' || od.discount , ';') within group (order by od.product_id) "product" from ORDERS_DETAIL od left join product_detail pd on od.product_id = pd.id LEFT JOIN images im ON pd.thumbnail= im.id where od.order_id = o.id) as product 
   FROM ORDERS o
   LEFT JOIN STATUS s ON o.status= s.id
+  LEFT JOIN coupon c ON o.coupon= c.id
   WHERE o.user_id = ${id}
   ORDER BY o.CREATE_DATE desc`;
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
+        console.log(err);
+
         res
           .status(500)
           .json({ message: err.message | 'Error getting data from DB' });
@@ -125,7 +142,6 @@ orderRoute.get('/order', async (req, res) => {
             Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
           );
         });
-        console.log(rows);
 
         res.json({
           data: rows,
@@ -214,4 +230,47 @@ orderRoute.get('/order/invoice/:id', async (req, res) => {
   });
 });
 
+orderRoute.get('/order/coupon', async (req, res) => {
+  const query = `SELECT id, value, unit, quantity, expired_date from coupon where Lower(name) = '${req.query.name?.toLowerCase()}'`;
+  db.connect().then(async (connect) => {
+    connect.execute(query, {}, { resultSet: true }, (err, result) => {
+      if (err) {
+        res
+          .status(500)
+          .json({ message: err.message | 'Internal Server Error' });
+        db.doRelease(connect);
+        return;
+      }
+      result.resultSet.getRow((err, row) => {
+        if (err) throw err;
+        if (!row) {
+          res.status(404).json({ message: 'Invalid Coupon!' });
+          db.doRelease(connect);
+          return;
+        }
+        row = Object.fromEntries(
+          Object.entries(row).map(([k, v]) => [k.toLowerCase(), v]),
+        );
+        if (dayjs().isAfter(dayjs(row.expired_date))) {
+          res.status(500).json({ message: 'Coupon đã hết hạn!' });
+          db.doRelease(connect);
+          return;
+        }
+        if (row.quantity < 1) {
+          res.status(500).json({ message: 'Coupon đã số lượng sử dụng!' });
+          db.doRelease(connect);
+          return;
+        }
+        res.json({
+          data: {
+            id: row.id,
+            value: row.value,
+            unit: row.unit,
+          },
+        });
+      });
+      db.doRelease(connect);
+    });
+  });
+});
 module.exports = orderRoute;

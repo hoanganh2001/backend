@@ -349,7 +349,7 @@ productRoute.get('/product-favorite', async (req, res) => {
   );
   db.connect().then(async (connect) => {
     const query =
-      `SELECT pd.*, 1 as FAVORITE FROM FAVORITE_PRODUCT fp inner join product_detail pd on pd.id = fp.product_id WHERE USER_ID = ${id}` +
+      `SELECT pd.*, im.file_id as thumbnail_url, 1 as FAVORITE FROM FAVORITE_PRODUCT fp inner join product_detail pd on pd.id = fp.product_id left join images im on pd.thumbnail = im.id WHERE USER_ID = ${id}` +
       getQueryString(req.query, true);
     const lengthQuery =
       `SELECT count(pd.id) as length FROM FAVORITE_PRODUCT pd WHERE USER_ID = ${id}` +

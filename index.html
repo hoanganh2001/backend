@@ -550,6 +550,16 @@
                                 </td>
                               </tr>
                               {{/each}}
+                              {{if coupon}}
+                              <tr>
+                                <td width="80%" class="purchase_footer" colspan="2" valign="middle">
+                                  <p class="f-fallback purchase_total purchase_total--label">Discount</p>
+                                </td>
+                                <td width="20%" class="purchase_footer" align="right" valign="middle">
+                                  <p class="f-fallback purchase_total">{{coupon}}</p>
+                                </td>
+                              </tr>
+                              {{/if}}
                               <tr>
                                 <td width="80%" class="purchase_footer" colspan="2" valign="middle">
                                   <p class="f-fallback purchase_total purchase_total--label">Total</p>
