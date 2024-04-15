@@ -187,23 +187,25 @@ adminRoute.get('/products', async (req, res) => {
 adminRoute.get('/product/:id', async (req, res) => {
   const productID = req.params.id;
   db.connect().then(async (connect) => {
-    const query =
-      `SELECT pd.*, pct.category_id,pct.type_id, pct.feature_id,img_2.file_id
-      FROM product_detail pd
-      LEFT JOIN (
-          SELECT img.product_id,
-          LISTAGG(img.id||','||img.file_id, ';')  as file_id
-          FROM images img group by img.product_id) img_2 
-      on pd.id = img_2.product_id
-      LEFT JOIN (
-          SELECT pc.product_detail_id, 
-          pc.category_id, 
-          LISTAGG(pc.type_id, ', ')  as type_id,
-          LISTAGG(pc.feature_id, ', ')  as feature_id
-          FROM product_category  pc
-          GROUP BY pc.product_detail_id, pc.category_id) pct
-      ON pd.id = pct.product_detail_id
-      ` + getQueryString(req.params, true);
+    const query = `SELECT pd.*, pct.category_id,pct.type_id, pct.feature_id,img_2.file_id, b.name as brand_name
+    FROM product_detail pd
+    LEFT JOIN (
+        SELECT img.product_id,
+        LISTAGG(img.id||','||img.file_id, ';')  as file_id
+        FROM images img group by img.product_id) img_2
+    on pd.id = img_2.product_id
+    LEFT JOIN (
+        SELECT pc.product_detail_id,
+        pc.category_id,
+        LISTAGG(pc.type_id, ', ')  as type_id,
+        LISTAGG(pc.feature_id, ', ')  as feature_id
+        FROM product_category  pc
+        GROUP BY pc.product_detail_id, pc.category_id) pct
+    ON pd.id = pct.product_detail_id
+    LEFT JOIN BRANDS b
+    ON pd.brand_id = b.id
+      where pd.id = ${productID}`;
+    console.log(query);
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
         res.status(500).json({ message: err | 'Error getting data from DB' });
@@ -259,6 +261,9 @@ adminRoute.delete('/product/:id', async (req, res) => {
     begin
         DELETE FROM PRODUCT_CATEGORY WHERE PRODUCT_DETAIL_ID = ${productId};
         DELETE FROM IMAGES WHERE PRODUCT_ID = ${productId};
+        UPDATE PRODUCT_DETAIL SET BRAND_ID = NULL WHERE ID = ${productId};
+        UPDATE ORDERS_DETAIL SET PRODUCT_ID = NULL WHERE PRODUCT_ID = ${productId};
+        DELETE FROM FAVORITE_PRODUCT WHERE PRODUCT_ID = ${productId};
         DELETE FROM PRODUCT_DETAIL WHERE ID = ${productId};
     end;
   `;
@@ -270,6 +275,7 @@ adminRoute.delete('/product/:id', async (req, res) => {
         return;
       }
       const message = result.rowsAffected ? 'success' : 'fail';
+      console.log(result);
       res.status(200).json({ message: message });
       db.doRelease(connect);
     });
@@ -1224,5 +1230,288 @@ async function sendInvoice(result) {
     return err;
   }
 }
+
+// api for brands management
+adminRoute.get('/brands', async (req, res) => {
+  db.connect().then(async (connect) => {
+    const query =
+      `select b.*, im.file_id as thumbnail_url from BRANDS b left join images im on b.image = im.id
+    ` + getQueryString(req.query, undefined, undefined, true, 'b');
+    const lengthQuery =
+      `SELECT count(b.id) as length FROM BRANDS b ` +
+      getQueryString(req.query, true);
+    const length = await (
+      await connect.execute(lengthQuery, {})
+    ).rows[0].LENGTH;
+    connect.execute(query, {}, { resultSet: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      result.resultSet.getRows((err, rows) => {
+        if (err) throw err;
+        rows = rows.map((item) => {
+          return Object.fromEntries(
+            Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
+          );
+        });
+        res.json({
+          data: rows,
+          meta: {
+            limit: parseInt(req.query.limit ? req.query.limit : 28),
+            offset: parseInt(req.query.offset ? req.query.offset : 0),
+            length: length,
+          },
+        });
+      });
+      db.doRelease(connect);
+    });
+  });
+});
+
+adminRoute.delete('/brand/:id', async (req, res) => {
+  const brandId = req.params.id;
+  if (!brandId) {
+    res.status(404).json({ message: 'Do not have brand!' });
+    return;
+  }
+  const query = `
+    begin
+        UPDATE PRODUCT_DETAIL SET brand_id = NULL WHERE brand_id = ${brandId};
+        DELETE FROM brands WHERE id = ${brandId};
+    end;
+  `;
+  console.log(query);
+  db.connect().then(async (connect) => {
+    connect.execute(query, {}, { autoCommit: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      res.status(200).json({ message: 'success' });
+      db.doRelease(connect);
+    });
+  });
+});
+
+adminRoute.post('/brand', async (req, res) => {
+  const brandValue = req.body;
+  brandValue['id'] = { type: oracledb.NUMBER, dir: oracledb.BIND_OUT };
+  const query = `
+   DECLARE
+      brand_id number;
+    begin
+      INSERT INTO brands(NAME)
+      VALUES(:name)
+      returning id into brand_id;
+      :id := brand_id;
+    end;`;
+  db.connect().then(async (connect) => {
+    connect.execute(query, brandValue, { autoCommit: true }, (err, result) => {
+      if (err) {
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      const id = result.outBinds.id;
+      res.status(200).json({ message: 'success', brand_id: id });
+      db.doRelease(connect);
+    });
+  });
+  return;
+});
+
+adminRoute.post('/brand/:id/images', async (req, res) => {
+  const brandID = req.params.id;
+  const form = new formidable.IncomingForm();
+  try {
+    [fields, files] = await form.parse(req);
+    if (!files) {
+      return res.status.json({ message: 'file upload must at least one' });
+    }
+  } catch (err) {
+    res.writeHead(err.httpCode || 400, { 'Content-Type': 'text/plain' });
+    res.json(String(err.message));
+    return;
+  }
+  const idImages = await uploadFile.upload(files.ufile);
+  const query = `
+       declare
+        img_id number;
+       begin
+         INSERT INTO IMAGES(FILE_ID) VALUES ('${idImages[0]}')
+         returning id into img_id;
+          update brands set image = img_id where id = ${brandID};
+       end;`;
+  db.connect().then(async (connect) => {
+    connect.execute(query, {}, { autoCommit: true }, (err, result) => {
+      if (err) {
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      res.status(200).json({ message: 'success' });
+      db.doRelease(connect);
+    });
+  });
+});
+
+adminRoute.put('/brand/:id', async (req, res) => {
+  const brandID = req.params.id;
+  const brandValue = req.body;
+  let info = '';
+  Object.keys(brandValue).forEach((t) => {
+    info += `${info.length === 0 ? '' : ', '}${t} = ${
+      brandValue[t]
+        ? isNaN(+brandValue)
+          ? "'" + brandValue[t] + "'"
+          : brandValue[t]
+        : null
+    }`;
+  });
+  console.log(info);
+  const query = `
+  begin
+    UPDATE brands SET ${info} WHERE ID = ${brandID};
+  end;`;
+  console.log(query);
+
+  db.connect().then(async (connect) => {
+    connect.execute(query, {}, { autoCommit: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      res.status(200).json({ message: 'success' });
+      db.doRelease(connect);
+    });
+  });
+  return;
+});
+
+// api for brands management
+adminRoute.get('/coupons', async (req, res) => {
+  db.connect().then(async (connect) => {
+    const query =
+      `select * from COUPON c
+    ` + getQueryString(req.query, undefined, undefined, true, 'c');
+    const lengthQuery =
+      `SELECT count(b.id) as length FROM BRANDS b ` +
+      getQueryString(req.query, true);
+    const length = await (
+      await connect.execute(lengthQuery, {})
+    ).rows[0].LENGTH;
+    connect.execute(query, {}, { resultSet: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      result.resultSet.getRows((err, rows) => {
+        if (err) throw err;
+        rows = rows.map((item) => {
+          return Object.fromEntries(
+            Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
+          );
+        });
+        res.json({
+          data: rows,
+          meta: {
+            limit: parseInt(req.query.limit ? req.query.limit : 28),
+            offset: parseInt(req.query.offset ? req.query.offset : 0),
+            length: length,
+          },
+        });
+      });
+      db.doRelease(connect);
+    });
+  });
+});
+
+adminRoute.delete('/coupon/:id', async (req, res) => {
+  const brandId = req.params.id;
+  if (!brandId) {
+    res.status(404).json({ message: 'Do not have brand!' });
+    return;
+  }
+  const query = `
+    begin
+        UPDATE PRODUCT_DETAIL SET brand_id = NULL WHERE brand_id = ${brandId};
+        DELETE FROM brands WHERE id = ${brandId};
+    end;
+  `;
+  console.log(query);
+  db.connect().then(async (connect) => {
+    connect.execute(query, {}, { autoCommit: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      res.status(200).json({ message: 'success' });
+      db.doRelease(connect);
+    });
+  });
+});
+
+adminRoute.post('/coupon', async (req, res) => {
+  const couponValue = req.body;
+  const query = `
+      INSERT INTO coupons(NAME,VALUE,UNIT,QUANTITY,START_DATE,EXIRED_DATE)
+      VALUES(:name,:value,:unit,:quantity,:start_date,:expired_date);
+    `;
+  db.connect().then(async (connect) => {
+    connect.execute(query, couponValue, { autoCommit: true }, (err, result) => {
+      if (err) {
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      res.status(200).json({ message: 'success' });
+      db.doRelease(connect);
+    });
+  });
+  return;
+});
+
+adminRoute.put('/coupon/:id', async (req, res) => {
+  const couponID = req.params.id;
+  const couponValue = req.body;
+  let info = '';
+  Object.keys(couponValue).forEach((t) => {
+    info += `${info.length === 0 ? '' : ', '}${t} = ${
+      couponValue[t]
+        ? isNaN(+couponValue)
+          ? "'" + couponValue[t] + "'"
+          : couponValue[t]
+        : null
+    }`;
+  });
+  const query = `
+  begin
+    UPDATE coupons SET ${info} WHERE ID = ${couponID};
+  end;`;
+  db.connect().then(async (connect) => {
+    connect.execute(query, {}, { autoCommit: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: err | 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      res.status(200).json({ message: 'success' });
+      db.doRelease(connect);
+    });
+  });
+  return;
+});
 
 module.exports = adminRoute;

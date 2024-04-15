@@ -15,7 +15,7 @@ brandRoute.get('/brands', (req, res) => {
       ? `where name like '${req.query.brand_name}'`
       : '';
     const query =
-      `SELECT * FROM brands ${where} ORDER BY NAME ASC` +
+      `SELECT b.*, im.file_id as thumbnail_url from BRANDS b left join images im on b.image = im.id ${where} ORDER BY NAME ASC` +
       pageOffset +
       pageLimit;
 
