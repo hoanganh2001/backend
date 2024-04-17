@@ -304,6 +304,10 @@
       color: #333333;
     }
 
+    .purchase_discount {
+      font-size: 13px;
+    }
+
     .purchase_total--label {
       padding: 0 15px 0 0;
     }
@@ -550,13 +554,14 @@
                                 </td>
                               </tr>
                               {{/each}}
-                              {{if coupon}}
+                              {{#if coupon_data}}
                               <tr>
                                 <td width="80%" class="purchase_footer" colspan="2" valign="middle">
-                                  <p class="f-fallback purchase_total purchase_total--label">Discount</p>
+                                  <p class="f-fallback purchase_total purchase_discount purchase_total--label">Discount
+                                  </p>
                                 </td>
                                 <td width="20%" class="purchase_footer" align="right" valign="middle">
-                                  <p class="f-fallback purchase_total">{{coupon}}</p>
+                                  <p class="f-fallback purchase_total purchase_discount">-{{coupon_data}}</p>
                                 </td>
                               </tr>
                               {{/if}}

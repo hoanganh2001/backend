@@ -471,6 +471,15 @@
             border-left: none
         }
 
+        .table tbody tr td:last-child {
+            border-left: 1px solid black !important;
+        }
+
+
+        .table tbody tr td.donghang:last-child {
+            border-left: 1px solid black !important;
+        }
+
         #headerTemp table td.infoTemp,
         .header table td.infoTemp {
             padding: 2px 5px 5px 5px
@@ -536,7 +545,7 @@
 
         .BANG_CO_KE_COT_MO .table thead tr th,
         .BANG_CO_KE_COT_MO .table tbody tr td {
-            border-left-color: black
+            border-left-color: black !important
         }
 
 
@@ -1169,13 +1178,13 @@
             var summaryList = document.getElementById("invoiceItems").getElementsByClassName("summary");
             var summaryHeight = 0; for (var i = 0; i < summaryList.length; i++) summaryHeight += summaryList[i].offsetHeight;
             var emptyRowHTML = '<td class="text-center donghang">&#160;</td>\
-														<td class="donghang"></td>\
-														<td class="donghang"></td>\
-														<td class="donghang"></td>\
-														<td class="donghang"></td>\
-														<td class="donghang"></td>\
-														<td class="donghang"></td>\
-														<td class="donghang"></td>';
+														<td style="border-left: 1px solid black !important" class="donghang"></td>\
+														<td style="border-left: 1px solid black !important" class="donghang"></td>\
+														<td style="border-left: 1px solid black !important" class="donghang"></td>\
+														<td style="border-left: 1px solid black !important" class="donghang"></td>\
+														<td style="border-left: 1px solid black !important" class="donghang"></td>\
+														<td style="border-left: 1px solid black !important" class="donghang"></td>\
+														<td style="border-left: 1px solid black !important" class="donghang"></td>';
 
             if (document.body.classList.contains('NHIEU_TRANG')) {
                 //Tính maxContentHeight
@@ -1811,6 +1820,21 @@
                                 <td class="text-right donghang" style="width: 130px;">{{ this.Amount }}</td>
                             </tr>
                             {{/each}}
+                            {{#if orderData.coupon_data}}
+                            <tr class="summary">
+                                <td class="borderTop" colspan="7">
+                                    <div class="infoContainer w99o" data-style="txt_totalContainer">
+                                        <div class="text-right"><span class="editable styleChange"
+                                                data-style="txt_total" data-label="txt_total">Giảm giá</span><span
+                                                class="SONG_NGU editable styleChange" style="font-style:italic;"
+                                                data-style="txt_total_SN" data-label="txt_total_SN">(Discount)</span>:
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="borderTop text-right" colspan="" style="display: table-cell;">{{
+                                    orderData.coupon_data }}</td>
+                            </tr>
+                            {{/if}}
                             <tr class="summary">
                                 <td class="borderTop" colspan="4" style="display: table-cell">
                                     <div class="infoContainer w99o" data-style="txt_totalContainer">
@@ -1831,7 +1855,7 @@
                                     orderData.total }}</td>
                             </tr>
                             <tr class="summary">
-                                <td class="borderTop" colspan="9">
+                                <td class="borderTop" colspan="8">
                                     <div class="infoContainer" style="width:99.5%"
                                         data-style="txt_totalInWordsContainer">
                                         <div class="colLabel" onkeyup="drawDongKe(this)"><span

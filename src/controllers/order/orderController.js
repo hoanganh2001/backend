@@ -231,7 +231,7 @@ orderRoute.get('/order/invoice/:id', async (req, res) => {
 });
 
 orderRoute.get('/order/coupon', async (req, res) => {
-  const query = `SELECT id, value, unit, quantity, expired_date from coupon where Lower(name) = '${req.query.name?.toLowerCase()}'`;
+  const query = `SELECT id, value, unit, quantity, start_date, expired_date from coupon where Lower(name) = '${req.query.name?.toLowerCase()}'`;
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
@@ -251,8 +251,13 @@ orderRoute.get('/order/coupon', async (req, res) => {
         row = Object.fromEntries(
           Object.entries(row).map(([k, v]) => [k.toLowerCase(), v]),
         );
-        if (dayjs().isAfter(dayjs(row.expired_date))) {
-          res.status(500).json({ message: 'Coupon đã hết hạn!' });
+        if (
+          dayjs().isAfter(dayjs(row.expired_date)) ||
+          dayjs().isBefore(dayjs(row.start_date))
+        ) {
+          res
+            .status(500)
+            .json({ message: 'Coupon đã hết hạn hoặc chưa bắt đầu!' });
           db.doRelease(connect);
           return;
         }

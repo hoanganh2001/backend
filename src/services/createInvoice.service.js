@@ -41,6 +41,7 @@ const defaultData = {
     totalAmountBeforeVAT: 0,
     totalVAtprice: 0,
     total: 0,
+    coupon_data: null,
     totalInWord: '',
   },
 };
@@ -60,7 +61,6 @@ create = async (data, fileName) => {
       // we are using headless mode
       const browser = await puppeteer.launch();
       const page = await browser.newPage();
-
       // We set the page content as the generated html by handlebars
       await page.setContent(html, {
         waitUntil: 'domcontentloaded',
@@ -70,6 +70,8 @@ create = async (data, fileName) => {
         format: 'A4',
         printBackground: true, //<---
         scale: 1,
+        printBackground: true,
+        preferCSSPageSize: true,
         landscape: false,
         pageRanges: '',
       });
@@ -101,7 +103,6 @@ async function getTemplateHtml() {
 function generateData(order, createdDate) {
   dayjs.extend(toObject);
   const data = structuredClone(defaultData);
-  const productDefault = structuredClone(defaultData.orderData.products[0]);
   Object.keys(data.customer).forEach((t) => {
     data.customer[t] = order[t];
   });
@@ -112,22 +113,26 @@ function generateData(order, createdDate) {
   });
   data.dateFull = dayjs(currentDate).format('DD/MM/YYYY');
   data.orderData.id = order.id;
+  data.orderData.coupon_data = order.coupon_data || null;
+  data.orderData.total = formatNumber(order.amount, ',');
   data.orderData.products = order.product.map((item, index) => {
     const productDefault = structuredClone(defaultData.orderData.products[0]);
     productDefault.id = item.id;
     productDefault.name = item.name;
     productDefault.quantity = item.quantity;
-    productDefault.unitPrice = item.price * (item.discount ? item.discount : 1);
+    productDefault.unitPrice = Math.round(
+      (item.price * (item.discount ? item.discount : 1)) / 1.1,
+    );
     productDefault.priceBeforeVAT =
       productDefault.quantity * productDefault.unitPrice;
     productDefault.VAT = 10;
-    productDefault.VAtprice =
-      productDefault.priceBeforeVAT * productDefault.VAT;
+    productDefault.VAtprice = Math.round(
+      (productDefault.priceBeforeVAT * productDefault.VAT) / 100,
+    );
     productDefault.Amount =
       productDefault.priceBeforeVAT + productDefault.VAtprice;
     data.orderData.totalAmountBeforeVAT += productDefault.priceBeforeVAT;
     data.orderData.totalVAtprice += productDefault.priceBeforeVAT;
-    data.orderData.total += productDefault.Amount;
     if (index === order.product.length - 1) {
       data.orderData.totalInWord = convertNumToText(data.orderData.total);
       data.orderData.totalAmountBeforeVAT = formatNumber(
@@ -138,7 +143,6 @@ function generateData(order, createdDate) {
         data.orderData.totalVAtprice,
         ',',
       );
-      data.orderData.total = formatNumber(data.orderData.total, ',');
     }
     Object.keys(productDefault).forEach((t) => {
       productDefault[t] = isNaN(+productDefault[t])

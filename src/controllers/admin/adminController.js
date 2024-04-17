@@ -159,7 +159,7 @@ adminRoute.get('/products', async (req, res) => {
     ).rows[0].LENGTH;
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -208,7 +208,7 @@ adminRoute.get('/product/:id', async (req, res) => {
     console.log(query);
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -270,7 +270,7 @@ adminRoute.delete('/product/:id', async (req, res) => {
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -327,7 +327,7 @@ adminRoute.post('/product', async (req, res) => {
   db.connect().then(async (connect) => {
     connect.execute(query, detailValue, { autoCommit: true }, (err, result) => {
       if (err) {
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -381,7 +381,7 @@ adminRoute.put('/product/:id', async (req, res) => {
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -430,7 +430,7 @@ adminRoute.post('/product/:id/images/:thumbnail', async (req, res) => {
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -447,7 +447,7 @@ adminRoute.put('/product/:id/thumbnail/:thumbnail', async (req, res) => {
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -464,7 +464,7 @@ adminRoute.delete('/product/:id/images', async (req, res) => {
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -495,15 +495,12 @@ adminRoute.get('/categories', async (req, res) => {
     const lengthQuery =
       `SELECT count(id) as length from categories ` +
       getQueryString(req.query, true);
-    console.log(query);
     const length = await (
       await connect.execute(lengthQuery, {})
     ).rows[0].LENGTH;
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        res
-          .status(500)
-          .json({ message: err.Error | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -546,6 +543,184 @@ adminRoute.get('/categories', async (req, res) => {
   });
 });
 
+adminRoute.get('/category/:id', async (req, res) => {
+  const categoryId = req.params.id;
+  db.connect().then(async (connect) => {
+    const query = `select * from categories where id = ${categoryId} `;
+    connect.execute(query, {}, { resultSet: true }, (err, result) => {
+      if (err) {
+        res.status(500).json({ message: 'Internal Server Error' });
+        db.doRelease(connect);
+        return;
+      }
+      result.resultSet.getRow((err, row) => {
+        if (err) throw err;
+        row = Object.fromEntries(
+          Object.entries(row).map(([k, v]) => [k.toLowerCase(), v]),
+        );
+        res.json({
+          data: row,
+        });
+      });
+      db.doRelease(connect);
+    });
+  });
+});
+
+adminRoute.post('/category', async (req, res) => {
+  const typeList = req.body.type;
+  const featureList = req.body.feature;
+  const insertQuery = {
+    type: '',
+    feature: '',
+  };
+  typeList?.forEach((t) => {
+    insertQuery['type'] += `INSERT INTO TYPES(NAME,CATEGORY_TYPE_ID)
+    VALUES('${t}',category_type_id);`;
+  });
+  featureList?.forEach((t) => {
+    insertQuery['feature'] += `INSERT INTO FEATURES(NAME,CATEGORY_FEATURE_ID)
+    VALUES('${t}',category_feature_id);`;
+  });
+  db.connect().then(async (connect) => {
+    const query = `DECLARE
+    category_id number;
+    category_type_id number;
+    category_feature_id number;
+    begin
+    INSERT INTO CATEGORIES(NAME,SPECIFICATION_TEMPLATE)
+    VALUES('${req.body.name}','${req.body.specification}')
+    returning id into category_id;
+    INSERT INTO CATEGORY_TYPE(NAME,CATEGORY_ID)
+    VALUES('${req.body.name} type',category_id)
+    returning id into category_type_id;
+    INSERT INTO CATEGORY_FEATURE(NAME,CATEGORY_ID)
+    VALUES('${req.body.name} feature',category_id)
+    returning id into category_feature_id;
+    ${insertQuery.type}
+    ${insertQuery.feature}
+    end;`;
+    console.log(query);
+    connect.execute(query, {}, { autoCommit: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: 'Internal Server Error' });
+        db.doRelease(connect);
+        return;
+      }
+      res.status(200).json({ message: 'success' });
+      db.doRelease(connect);
+      return;
+    });
+  });
+});
+
+adminRoute.put('/category/:id', async (req, res) => {
+  const categoryId = req.params.id;
+  const typeList = req.body.type;
+  const featureList = req.body.feature;
+  const oldTypeList = req.body.type?.filter((t) => !isNaN(+t));
+  const oldFeatureList = req.body.feature?.filter((t) => !isNaN(+t));
+  const insertQuery = {
+    type: '',
+    feature: '',
+  };
+  typeList?.forEach((t) => {
+    if (typeof t == 'string') {
+      insertQuery['type'] += `INSERT INTO TYPES(NAME,CATEGORY_TYPE_ID)
+      VALUES('${t}',category_type_id);`;
+    }
+  });
+  featureList?.forEach((t) => {
+    if (typeof t == 'string') {
+      insertQuery['feature'] += `INSERT INTO FEATURES(NAME,CATEGORY_FEATURE_ID)
+    VALUES('${t}',category_feature_id);`;
+    }
+  });
+  db.connect().then(async (connect) => {
+    const query = `DECLARE
+    category_type_id number;
+    category_feature_id number;
+    begin
+    UPDATE CATEGORIES SET
+    NAME = '${req.body.name}', SPECIFICATION_TEMPLATE = ${
+      req.body.specification ? "'" + req.body.specification + "'" : 'NULL'
+    } WHERE ID = ${categoryId};
+    SELECT id into category_type_id FROM CATEGORY_TYPE WHERE CATEGORY_ID = ${categoryId};
+    SELECT id into category_feature_id FROM CATEGORY_FEATURE WHERE CATEGORY_ID = ${categoryId};
+    update TYPES set CATEGORY_TYPE_ID = NULL WHERE CATEGORY_TYPE_ID = category_type_id ${
+      oldTypeList && oldTypeList.length > 0
+        ? 'AND ID NOT IN (' + oldTypeList + ')'
+        : ''
+    };
+    update FEATURES set CATEGORY_FEATURE_ID = NULL WHERE CATEGORY_FEATURE_ID = category_feature_id ${
+      oldTypeList && oldTypeList.length > 0
+        ? 'AND ID NOT IN (' + oldTypeList + ')'
+        : ''
+    };
+    ${insertQuery.type}
+    ${insertQuery.feature}
+    end;`;
+    connect.execute(query, {}, { autoCommit: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: 'Internal Server Error' });
+        db.doRelease(connect);
+        return;
+      }
+      res.status(200).json({ message: 'success' });
+      db.doRelease(connect);
+      return;
+    });
+  });
+});
+
+adminRoute.delete('/category/:id', async (req, res) => {
+  const categoryId = req.params.id;
+  if (!categoryId) {
+    res.status(404).json({ message: 'Do not have new!' });
+    return;
+  }
+  db.connect().then(async (connect) => {
+    const checkCategory = await connect.execute(
+      `Select id from product_category where CATEGORY_ID = ${categoryId}`,
+    );
+    if (checkCategory.rows.length > 0) {
+      res.status(500).json({
+        message: 'Product has this category. This category can not be deleted!',
+      });
+      db.doRelease(connect);
+      return;
+    }
+    const query = `DECLARE
+          category_type_id number;
+          category_feature_id number;
+      begin
+          SELECT id into category_type_id FROM CATEGORY_TYPE WHERE CATEGORY_ID = ${categoryId};
+          SELECT id into category_feature_id FROM CATEGORY_FEATURE WHERE CATEGORY_ID = ${categoryId};
+          UPDATE PRODUCT_CATEGORY SET CATEGORY_ID = NULL, TYPE_ID = NULL, FEATURE_ID = NULL WHERE CATEGORY_ID = ${categoryId};
+          DELETE FROM TYPES WHERE CATEGORY_TYPE_ID = category_type_id;
+          DELETE FROM FEATURES WHERE CATEGORY_FEATURE_ID = category_feature_id;
+          DELETE FROM CATEGORY_TYPE WHERE CATEGORY_ID = ${categoryId};
+          DELETE FROM CATEGORY_FEATURE WHERE CATEGORY_ID = ${categoryId};
+          DELETE FROM CATEGORIES WHERE id = ${categoryId};
+      end;
+    `;
+    console.log(query);
+    connect.execute(query, {}, { autoCommit: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: 'Error getting data from DB' });
+        db.doRelease(connect);
+        return;
+      }
+      res.status(200).json({ message: 'success' });
+      db.doRelease(connect);
+      return;
+    });
+  });
+});
+
 // api for orders management
 adminRoute.get('/orders', async (req, res) => {
   db.connect().then(async (connect) => {
@@ -565,7 +740,7 @@ adminRoute.get('/orders', async (req, res) => {
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
         console.log(err);
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -618,9 +793,7 @@ adminRoute.put('/order/:id/confirm', async (req, res) => {
         { autoCommit: true },
         async (err, result) => {
           if (err) {
-            res
-              .status(500)
-              .json({ message: err | 'Error getting data from DB' });
+            res.status(500).json({ message: 'Internal Server Error' });
             db.doRelease(connect);
             return;
           }
@@ -662,7 +835,7 @@ adminRoute.put('/order/:id/onway', async (req, res) => {
       const updateQuery = `update orders set status = 2, update_date = '${update_date}' where id = ${orderID}`;
       connect.execute(updateQuery, {}, { autoCommit: true }, (err, result) => {
         if (err) {
-          res.status(500).json({ message: err | 'Error getting data from DB' });
+          res.status(500).json({ message: 'Internal Server Error' });
           db.doRelease(connect);
           return;
         }
@@ -695,9 +868,7 @@ adminRoute.put('/order/:id/success', async (req, res) => {
         { autoCommit: true },
         async (err, result) => {
           if (err) {
-            res
-              .status(500)
-              .json({ message: err | 'Error getting data from DB' });
+            res.status(500).json({ message: 'Internal Server Error' });
             db.doRelease(connect);
             return;
           }
@@ -724,11 +895,11 @@ adminRoute.put('/order/:id/invoice', async (req, res) => {
     const query = `select status from orders where id = ${orderID}`;
     const status = await connect.execute(query, {});
     if ([2, 3, 5].includes(status.rows[0].STATUS)) {
-      const getQuery = `SELECT o.*,
+      const getQuery = `SELECT o.*, c.value as coupon_value, c.unit as coupon_unit,
       (select listagg ('id|' || od.product_id || ',' || 'name|' ||  pd.name || ',' || 'image|' || im.file_id || ',' || 'quantity|' || od.quantity || ',' || 'price|' || od.price || ',' || 'discount|' || od.discount ,';') within group (order by od.product_id) "product" 
       from ORDERS_DETAIL od left join product_detail pd on od.product_id = pd.id left join images im on pd.thumbnail = im.id
       where od.order_id = o.id) as product 
-      from orders o where id = ${orderID}`;
+      from orders o left join coupon c on o.coupon = c.id where o.id = ${orderID}`;
       try {
         const result = await connect.execute(getQuery, {});
         const order = result.rows.map((item) => {
@@ -741,6 +912,12 @@ adminRoute.put('/order/:id/invoice', async (req, res) => {
               }),
             ),
           );
+          if (item['COUPON_VALUE']) {
+            item['COUPON_DATA'] =
+              item['COUPON_UNIT'] === 'percent'
+                ? item['COUPON_VALUE'] + '%'
+                : formatNumber(item['COUPON_VALUE'], ',');
+          }
           return Object.fromEntries(
             Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
           );
@@ -799,9 +976,7 @@ adminRoute.put('/order/:id/cancel', async (req, res) => {
         { autoCommit: true },
         async (err, result) => {
           if (err) {
-            res
-              .status(500)
-              .json({ message: err | 'Error getting data from DB' });
+            res.status(500).json({ message: 'Internal Server Error' });
             db.doRelease(connect);
             return;
           }
@@ -878,7 +1053,7 @@ adminRoute.get('/news', async (req, res) => {
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
         console.log(err);
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -944,7 +1119,7 @@ adminRoute.post('/new', async (req, res) => {
     connect.execute(query, newValue, { autoCommit: true }, (err, result) => {
       if (err) {
         console.log(err);
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -983,7 +1158,7 @@ adminRoute.post('/new/:id/images', async (req, res) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
         console.log(err);
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -1017,7 +1192,7 @@ adminRoute.put('/new/:id', async (req, res) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
         console.log(err);
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -1043,7 +1218,7 @@ adminRoute.get('/users', async (req, res) => {
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
         console.log(err);
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -1086,7 +1261,7 @@ adminRoute.post('/user', async (req, res) => {
     connect.execute(query, userData, { autoCommit: true }, (err, result) => {
       if (err) {
         console.log(err);
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -1120,7 +1295,7 @@ adminRoute.put('/user/:id', async (req, res) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
         console.log(err);
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -1143,7 +1318,7 @@ adminRoute.put('/user/status/:id', async (req, res) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
         console.log(err);
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -1178,7 +1353,10 @@ adminRoute.put('/user/change-password/:id', async (req, res) => {
 async function sendInvoice(result) {
   try {
     const order = result.rows.map((item) => {
-      item.PRODUCT = item.PRODUCT.split(';').map((t) =>
+      item = Object.fromEntries(
+        Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
+      );
+      item.product = item.product.split(';').map((t) =>
         Object.fromEntries(
           t.split(',').map((e) => {
             return e.split('|').map((i) => {
@@ -1191,10 +1369,14 @@ async function sendInvoice(result) {
         'DD/MM/YYYY HH:mm:ss',
       );
       item['total'] = 0;
-      item['coupon'] = item['coupon']
-        ? formatNumber(t.price, ',') + item['coupon_unit']
-        : null;
-      item.PRODUCT.forEach((t) => {
+      if (item['coupon_value']) {
+        item['coupon_data'] =
+          item['coupon_unit'] === 'percent'
+            ? item['coupon_value'] + '%'
+            : formatNumber(item['coupon_value'], ',') + '₫';
+        console.log(123);
+      }
+      item.product.forEach((t) => {
         t.image =
           (t.image?.includes('/')
             ? 'https://3kshop.vn/wp-content/uploads/fly-images/'
@@ -1207,10 +1389,9 @@ async function sendInvoice(result) {
         t.price = formatNumber(t.price, ',');
       });
       item['total'] = formatNumber(item['total'], ',');
-      return Object.fromEntries(
-        Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
-      );
+      return item;
     })[0];
+    console.log(order);
     const data = order;
     const html = await readFile('./index.html', { encoding: 'utf-8' });
     const template = handlebars.compile(html);
@@ -1246,7 +1427,7 @@ adminRoute.get('/brands', async (req, res) => {
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
         console.log(err);
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -1313,7 +1494,7 @@ adminRoute.post('/brand', async (req, res) => {
   db.connect().then(async (connect) => {
     connect.execute(query, brandValue, { autoCommit: true }, (err, result) => {
       if (err) {
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -1350,7 +1531,7 @@ adminRoute.post('/brand/:id/images', async (req, res) => {
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -1373,18 +1554,16 @@ adminRoute.put('/brand/:id', async (req, res) => {
         : null
     }`;
   });
-  console.log(info);
   const query = `
   begin
     UPDATE brands SET ${info} WHERE ID = ${brandID};
   end;`;
-  console.log(query);
 
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
         console.log(err);
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -1410,7 +1589,7 @@ adminRoute.get('/coupons', async (req, res) => {
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
         console.log(err);
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -1464,14 +1643,14 @@ adminRoute.delete('/coupon/:id', async (req, res) => {
 
 adminRoute.post('/coupon', async (req, res) => {
   const couponValue = req.body;
-  const query = `
-      INSERT INTO coupons(NAME,VALUE,UNIT,QUANTITY,START_DATE,EXIRED_DATE)
-      VALUES(:name,:value,:unit,:quantity,:start_date,:expired_date);
-    `;
+  const query = `INSERT INTO coupon(NAME,VALUE,UNIT,QUANTITY,START_DATE,EXPIRED_DATE)
+      VALUES(:name,:value,:unit,:quantity,:start_date,:expired_date)`;
+  console.log(query);
   db.connect().then(async (connect) => {
     connect.execute(query, couponValue, { autoCommit: true }, (err, result) => {
       if (err) {
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        console.log(err);
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -1497,13 +1676,13 @@ adminRoute.put('/coupon/:id', async (req, res) => {
   });
   const query = `
   begin
-    UPDATE coupons SET ${info} WHERE ID = ${couponID};
+    UPDATE coupon SET ${info} WHERE ID = ${couponID};
   end;`;
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
         console.log(err);
-        res.status(500).json({ message: err | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
