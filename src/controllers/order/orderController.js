@@ -75,7 +75,7 @@ orderRoute.post('/check-out', async (req, res) => {
     connect.execute(query, bindValue, { autoCommit: true }, (err, result) => {
       if (err) {
         console.log(err);
-        res.status(500).json({ message: 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error!' });
         db.doRelease(connect);
         return;
       }
@@ -123,9 +123,7 @@ orderRoute.get('/order', async (req, res) => {
       if (err) {
         console.log(err);
 
-        res
-          .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error!' });
         db.doRelease(connect);
         return;
       }
@@ -190,9 +188,7 @@ orderRoute.post('/order/cancel', async (req, res) => {
     WHERE user_id = ${id} AND id = ${req.body.id}`;
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
-        res
-          .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error!' });
         db.doRelease(connect);
         return;
       }

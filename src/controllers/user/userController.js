@@ -118,7 +118,7 @@ userRoute.post('/sign-up', (req, res) => {
           async (err, result) => {
             if (err) {
               res.status(500).json({ message: 'Error saving employee to DB' });
-              doRelease(connect);
+              db.doRelease(connect);
               return;
             }
             const id = result.outBinds.id;
@@ -153,7 +153,7 @@ userRoute.get('/active-account', (req, res) => {
     await connect.execute(checkIsActived, {}, (err, result) => {
       if (err) {
         res.status(500).json({
-          message: { message: 'Internal server error' },
+          message: { message: 'Internal Server Error' },
         });
         res.send('<script>window.close();</script > ');
         db.doRelease(connect);
@@ -176,7 +176,7 @@ userRoute.get('/active-account', (req, res) => {
       async (err, result) => {
         if (err) {
           res.send('<h2>Có lỗi xảy ra khi kích hoạt!</h2> ');
-          doRelease(connect);
+          db.doRelease(connect);
           return;
         }
         res.send('<script>window.close();</script > ');
@@ -370,7 +370,7 @@ userRoute.post('/sendOTP', async (req, res) => {
       if (updateResult.rowsAffected !== 1) {
         res
           .status(500)
-          .json({ success: false, message: 'Internal server error' });
+          .json({ success: false, message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -389,7 +389,7 @@ userRoute.post('/sendOTP', async (req, res) => {
     });
   } catch (error) {
     console.error('Error sending OTP:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Internal Server Error' });
     db.doRelease(connect);
   }
 });
@@ -419,7 +419,7 @@ userRoute.post('/verifyOTP', (req, res) => {
       if (updateResult.rowsAffected !== 1) {
         res
           .status(500)
-          .json({ success: false, message: 'Internal server error' });
+          .json({ success: false, message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -434,7 +434,7 @@ userRoute.post('/verifyOTP', (req, res) => {
       console.error('Error sending OTP:', error);
       res
         .status(500)
-        .json({ success: false, message: 'Internal server error' });
+        .json({ success: false, message: 'Internal Server Error' });
       db.doRelease(connect);
       return;
     }
@@ -451,7 +451,7 @@ userRoute.put('/reset-password', (req, res) => {
       if (updateResult.rowsAffected !== 1) {
         res
           .status(500)
-          .json({ success: false, message: 'Internal server error' });
+          .json({ success: false, message: 'Internal Server Error' });
         db.doRelease(connect);
         return;
       }
@@ -465,7 +465,7 @@ userRoute.put('/reset-password', (req, res) => {
       console.error('Error sending OTP:', error);
       res
         .status(500)
-        .json({ success: false, message: 'Internal server error' });
+        .json({ success: false, message: 'Internal Server Error' });
       db.doRelease(connect);
       return;
     }

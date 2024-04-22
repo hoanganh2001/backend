@@ -140,7 +140,7 @@ productRoute.get('/products', async (req, res) => {
     ).rows[0].LENGTH;
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        res.status(500).json({ message: 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error!' });
         db.doRelease(connect);
         return;
       }
@@ -200,9 +200,7 @@ productRoute.get('/promotional-product', async (req, res) => {
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
         console.log(err);
-        res
-          .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error!' });
         db.doRelease(connect);
         return;
       }
@@ -239,9 +237,7 @@ productRoute.get('/product-detail/:id', (req, res) => {
       { resultSet: true },
       (err, result) => {
         if (err) {
-          res
-            .status(500)
-            .json({ message: err.message | 'Error getting data from DB' });
+          res.status(500).json({ message: 'Internal Server Error!' });
           db.doRelease(connect);
           return;
         }
@@ -314,9 +310,7 @@ productRoute.post('/product-favorite/:id', async (req, res) => {
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
-        res
-          .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error!' });
         db.doRelease(connect);
         return;
       }
@@ -359,9 +353,7 @@ productRoute.get('/product-favorite', async (req, res) => {
     ).rows[0].LENGTH;
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        res
-          .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error!' });
         db.doRelease(connect);
         return;
       }

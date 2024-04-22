@@ -710,7 +710,7 @@ adminRoute.delete('/category/:id', async (req, res) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
         console.log(err);
-        res.status(500).json({ message: 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error!' });
         db.doRelease(connect);
         return;
       }
@@ -1021,7 +1021,7 @@ adminRoute.delete('/order/:id', async (req, res) => {
       connect.execute(delQuery, {}, { autoCommit: true }, (err, result) => {
         if (err) {
           console.log(err);
-          res.status(500).json({ message: 'Error getting data from DB' });
+          res.status(500).json({ message: 'Internal Server Error!' });
           db.doRelease(connect);
           return;
         }
@@ -1093,7 +1093,7 @@ adminRoute.delete('/new/:id', async (req, res) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
         console.log(err);
-        res.status(500).json({ message: 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error!' });
         db.doRelease(connect);
         return;
       }
@@ -1336,7 +1336,7 @@ adminRoute.put('/user/change-password/:id', async (req, res) => {
     connect.execute(changePass, {}, { autoCommit: true }, (err, result) => {
       if (err) {
         res.status(500).json({
-          message: err.message | 'Error getting data from DB',
+          message: err.message | 'Internal Server Error!',
         });
         db.doRelease(connect);
         return;
@@ -1469,7 +1469,7 @@ adminRoute.delete('/brand/:id', async (req, res) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
         console.log(err);
-        res.status(500).json({ message: 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error!' });
         db.doRelease(connect);
         return;
       }
@@ -1631,7 +1631,7 @@ adminRoute.delete('/coupon/:id', async (req, res) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
         console.log(err);
-        res.status(500).json({ message: 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error!' });
         db.doRelease(connect);
         return;
       }

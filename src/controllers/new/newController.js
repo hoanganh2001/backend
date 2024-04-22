@@ -10,9 +10,7 @@ newsRoute.get('/news-lastest', (req, res) => {
     const sqlQuery = `Select n.*, im.file_id as image from news n left join images im on n.thumbnail_id = im.id order by create_date OFFSET 0 ROWS FETCH NEXT 5 ROWS ONLY `;
     connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        res
-          .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error!' });
         db.doRelease(connect);
         return;
       }
@@ -42,9 +40,7 @@ newsRoute.get('/news-list', (req, res) => {
     ).rows[0].LENGTH;
     connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        res
-          .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error!' });
         db.doRelease(connect);
         return;
       }
@@ -68,9 +64,7 @@ newsRoute.get('/new/:id', (req, res) => {
     const sqlQuery = `Select n.*, im.file_id as image from news n left join images im on n.thumbnail_id = im.id where n.id = ${newId} `;
     connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        res
-          .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error!' });
         db.doRelease(connect);
         return;
       }

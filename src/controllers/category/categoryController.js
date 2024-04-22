@@ -21,9 +21,7 @@ categoryRoute.get('/categories', (req, res) => {
     const types = await connect.execute(typeQuery, {}, { resultSet: true });
     types.resultSet.getRows((err, rows) => {
       if (err) {
-        res
-          .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error!' });
         db.doRelease(connect);
         return;
       }
@@ -91,9 +89,7 @@ categoryRoute.get('/categories', (req, res) => {
     );
     features.resultSet.getRows((err, rows) => {
       if (err) {
-        res
-          .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error!' });
         db.doRelease(connect);
         return;
       }
@@ -148,9 +144,7 @@ categoryRoute.get('/categories-list', (req, res) => {
     const sqlQuery = 'Select * from categories';
     connect.execute(sqlQuery, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        res
-          .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error!' });
         db.doRelease(connect);
         return;
       }

@@ -21,9 +21,7 @@ brandRoute.get('/brands', (req, res) => {
 
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        res
-          .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error!' });
         db.doRelease(connect);
         return;
       }
@@ -54,9 +52,7 @@ brandRoute.get('/categories-of-brand', (req, res) => {
 
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        res
-          .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error!' });
         db.doRelease(connect);
         return;
       }
@@ -89,9 +85,7 @@ brandRoute.get('/brands-with-category', (req, res) => {
 
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
-        res
-          .status(500)
-          .json({ message: err.message | 'Error getting data from DB' });
+        res.status(500).json({ message: 'Internal Server Error!' });
         db.doRelease(connect);
         return;
       }
