@@ -1693,4 +1693,80 @@ adminRoute.put('/coupon/:id', async (req, res) => {
   return;
 });
 
+adminRoute.get('/statistical', async (req, res) => {
+  const month = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  const query = `SELECT to_char(TO_DATE(trunc(TO_UTC_TIMESTAMP_TZ(create_date),'mm'),'YY-MM-DD'), 'MM') as month, count(id) as total, sum(amount) as amount
+  FROM orders 
+where trunc(to_timestamp_tz(create_date, 'YYYY-MM-DD"T"hh24:mi:ss.ff3"Z"')) between trunc(TO_UTC_TIMESTAMP_TZ('${dayjs().toISOString()}'),'YEAR') and add_months(trunc(TO_UTC_TIMESTAMP_TZ('${dayjs().toISOString()}'), 'y'), 12)- 1
+group by to_char(TO_DATE(trunc(TO_UTC_TIMESTAMP_TZ(create_date),'mm'),'YY-MM-DD'), 'MM') `;
+  db.connect().then(async (connect) => {
+    connect.execute(query, {}, { resultSet: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: 'Internal Server Error' });
+        db.doRelease(connect);
+        return;
+      }
+      result.resultSet.getRows((err, rows) => {
+        if (err) throw err;
+        rows = rows.map((item) => {
+          return Object.fromEntries(
+            Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
+          );
+        });
+        const curMonth = dayjs().month();
+        const test = month
+          .map((i) => {
+            if (i > curMonth + 1) return null;
+            const data = rows.find((e) => +e.month === i);
+            return {
+              month: +i,
+              total: data?.total || 0,
+              amount: data?.amount || 0,
+            };
+          })
+          .filter((t) => t);
+        res.json({
+          data: test,
+        });
+      });
+      db.doRelease(connect);
+    });
+  });
+});
+
+adminRoute.get('/curent-statistical', async (req, res) => {
+  const query = `SELECT count(id) as total, sum(amount) as amount
+  FROM orders 
+  where trunc(to_timestamp_tz(create_date, 'YYYY-MM-DD"T"hh24:mi:ss.ff3"Z"'))
+  between trunc(TO_UTC_TIMESTAMP_TZ('${dayjs()
+    .subtract(1, 'months')
+    .toISOString()}'),'mm') 
+  and LAST_DAY(TO_UTC_TIMESTAMP_TZ('${dayjs()
+    .subtract(1, 'months')
+    .toISOString()}'))`;
+  db.connect().then(async (connect) => {
+    connect.execute(query, {}, { resultSet: true }, (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ message: 'Internal Server Error' });
+        db.doRelease(connect);
+        return;
+      }
+      result.resultSet.getRows((err, rows) => {
+        if (err) throw err;
+        rows = rows.map((item) => {
+          return Object.fromEntries(
+            Object.entries(item).map(([k, v]) => [k.toLowerCase(), v]),
+          );
+        });
+        res.json({
+          data: rows,
+        });
+      });
+      db.doRelease(connect);
+    });
+  });
+});
+
 module.exports = adminRoute;
