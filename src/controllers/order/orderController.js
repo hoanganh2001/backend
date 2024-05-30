@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 const config = require('../../config/auth');
 const uploadGGDr = require('../../services/uploadGGDr.service');
 const dayjs = require('dayjs');
-const vnpConfig = require('../../config/vnPay.json')
+const vnpConfig = require('../../config/vnPay.json');
 oracledb.fetchAsString = [oracledb.CLOB];
 
 const orderRoute = express.Router();
@@ -275,16 +275,16 @@ orderRoute.get('/order/coupon', async (req, res) => {
 });
 
 orderRoute.post('/order/create_payment_url', function (req, res, next) {
-    
   process.env.TZ = 'Asia/Ho_Chi_Minh';
-  
+
   const date = new Date();
   let createDate = dayjs(date).format('YYYYMMDDHHmmss');
-  
-  let ipAddr = req.headers['x-forwarded-for'] ||
-      req.connection.remoteAddress ||
-      req.socket.remoteAddress ||
-      req.connection.socket.remoteAddress;
+
+  let ipAddr =
+    req.headers['x-forwarded-for'] ||
+    req.connection.remoteAddress ||
+    req.socket.remoteAddress ||
+    req.connection.socket.remoteAddress;
 
   let tmnCode = vnpConfig['vnp_TmnCode'];
   let secretKey = vnpConfig['vnp_HashSecret'];
@@ -308,21 +308,21 @@ orderRoute.post('/order/create_payment_url', function (req, res, next) {
   vnp_Params['vnp_ReturnUrl'] = returnUrl;
   vnp_Params['vnp_IpAddr'] = ipAddr;
   vnp_Params['vnp_CreateDate'] = createDate;
-  if(bankCode !== null && bankCode !== ''){
-      vnp_Params['vnp_BankCode'] = bankCode;
+  if (bankCode !== null && bankCode !== '') {
+    vnp_Params['vnp_BankCode'] = bankCode;
   }
 
   vnp_Params = sortObject(vnp_Params);
 
   let querystring = require('qs');
   let signData = querystring.stringify(vnp_Params, { encode: false });
-  let crypto = require("crypto");     
-  let hmac = crypto.createHmac("sha512", secretKey);
-  let signed = hmac.update(new Buffer(signData, 'utf-8')).digest("hex"); 
+  let crypto = require('crypto');
+  let hmac = crypto.createHmac('sha512', secretKey);
+  let signed = hmac.update(new Buffer(signData, 'utf-8')).digest('hex');
   vnp_Params['vnp_SecureHash'] = signed;
   vnpUrl += '?' + querystring.stringify(vnp_Params, { encode: false });
-  res.set('Content-Type', "text/html")
-  res.send(JSON.stringify(vnpUrl))
+  res.set('Content-Type', 'text/html');
+  res.send(JSON.stringify(vnpUrl));
 });
 
 orderRoute.get('/order/vnpay_return', function (req, res, next) {
@@ -336,42 +336,44 @@ orderRoute.get('/order/vnpay_return', function (req, res, next) {
 
   let tmnCode = vnpConfig['vnp_TmnCode'];
   let secretKey = vnpConfig['vnp_HashSecret'];
-  const TransactionStatus = vnp_Params['vnp_TransactionStatus']
+  const TransactionStatus = vnp_Params['vnp_TransactionStatus'];
   let querystring = require('qs');
   let signData = querystring.stringify(vnp_Params, { encode: false });
-  let crypto = require("crypto");     
-  let hmac = crypto.createHmac("sha512", secretKey);
-  let signed = hmac.update(new Buffer(signData, 'utf-8')).digest("hex");     
+  let crypto = require('crypto');
+  let hmac = crypto.createHmac('sha512', secretKey);
+  let signed = hmac.update(new Buffer(signData, 'utf-8')).digest('hex');
   if (secureHash === signed) {
+    console.log(TransactionStatus);
     //Kiem tra xem du lieu trong db co hop le hay khong va thong bao ket qua
-    if(TransactionStatus === '01') {
+    if (TransactionStatus == '00') {
       const orderId = req.query.vnp_TxnRef;
       db.connect().then(async (connect) => {
         const sql = `UPDATE orders SET status = 5 WHERE id = ${vnp_Params['vnp_TxnRef']}`;
-        await connect.execute(sql, {}, { autoCommit: true })
-        db.doRelease(connect)
+        await connect.execute(sql, {}, { autoCommit: true });
+        db.doRelease(connect);
       });
-      res.redirect(303,'http://localhost:4200/?payment=true')
+      res.redirect(303, 'http://localhost:4200/?payment=true');
     } else {
-      res.redirect(303,'http://localhost:4200/?payment=false')
+      res.redirect(303, 'http://localhost:4200/?payment=false');
     }
   } else {
-    res.render("success", { code: "97" });
-  }});
+    res.render('success', { code: '97' });
+  }
+});
 
 function sortObject(obj) {
-	let sorted = {};
-	let str = [];
-	let key;
-	for (key in obj){
-		if (obj.hasOwnProperty(key)) {
-		str.push(encodeURIComponent(key));
-		}
-	}
-	str.sort();
-    for (key = 0; key < str.length; key++) {
-        sorted[str[key]] = encodeURIComponent(obj[str[key]]).replace(/%20/g, "+");
+  let sorted = {};
+  let str = [];
+  let key;
+  for (key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      str.push(encodeURIComponent(key));
     }
-    return sorted;
+  }
+  str.sort();
+  for (key = 0; key < str.length; key++) {
+    sorted[str[key]] = encodeURIComponent(obj[str[key]]).replace(/%20/g, '+');
+  }
+  return sorted;
 }
 module.exports = orderRoute;
