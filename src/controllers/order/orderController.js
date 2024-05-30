@@ -347,7 +347,7 @@ orderRoute.get('/order/vnpay_return', function (req, res, next) {
     if(TransactionStatus === '01') {
       const orderId = req.query.vnp_TxnRef;
       db.connect().then(async (connect) => {
-        const sql = `UPDATE orders SET status = 2 WHERE id = ${vnp_Params['vnp_TxnRef']}`;
+        const sql = `UPDATE orders SET status = 5 WHERE id = ${vnp_Params['vnp_TxnRef']}`;
         await connect.execute(sql, {}, { autoCommit: true })
         db.doRelease(connect)
       });
