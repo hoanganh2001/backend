@@ -3,7 +3,7 @@ oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 
 const config = {
   user: 'SYSTEM',
-  password: 'hoanganh',
+  password: 'hoanganh1',
   connectString: 'localhost:1521/xe',
 };
 

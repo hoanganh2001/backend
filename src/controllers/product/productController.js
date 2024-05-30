@@ -189,8 +189,6 @@ productRoute.get('/promotional-product', async (req, res) => {
           : ''
       } , im.file_id as thumbnail_url FROM product_detail pd left join images im on pd.thumbnail = im.id where gift_id is not null or discount is not null ` +
       getQueryString(req.query, false, true);
-    console.log(query);
-
     const lengthQuery =
       `SELECT count(id) as length FROM product_detail pd where gift_id is not null or discount is not null ` +
       getQueryString(req.query, true, true);
@@ -253,7 +251,6 @@ productRoute.get('/product-detail/:id', (req, res) => {
               });
             }
             if (key.toLowerCase() === 'image') {
-              console.log(row[key]);
               row[key] = row[key]?.split(';').map((i) => {
                 const imgItem = i.split(',');
                 return {

@@ -205,7 +205,6 @@ adminRoute.get('/product/:id', async (req, res) => {
     LEFT JOIN BRANDS b
     ON pd.brand_id = b.id
       where pd.id = ${productID}`;
-    console.log(query);
     connect.execute(query, {}, { resultSet: true }, (err, result) => {
       if (err) {
         res.status(500).json({ message: 'Internal Server Error' });
@@ -275,7 +274,6 @@ adminRoute.delete('/product/:id', async (req, res) => {
         return;
       }
       const message = result.rowsAffected ? 'success' : 'fail';
-      console.log(result);
       res.status(200).json({ message: message });
       db.doRelease(connect);
     });
@@ -600,7 +598,6 @@ adminRoute.post('/category', async (req, res) => {
     ${insertQuery.type}
     ${insertQuery.feature}
     end;`;
-    console.log(query);
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
         console.log(err);
@@ -706,7 +703,6 @@ adminRoute.delete('/category/:id', async (req, res) => {
           DELETE FROM CATEGORIES WHERE id = ${categoryId};
       end;
     `;
-    console.log(query);
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
         console.log(err);
@@ -1124,7 +1120,6 @@ adminRoute.post('/new', async (req, res) => {
         return;
       }
       const id = result.outBinds.id;
-      console.log(result);
       res.status(200).json({ message: 'success', new_id: id });
       db.doRelease(connect);
     });
@@ -1181,12 +1176,10 @@ adminRoute.put('/new/:id', async (req, res) => {
         : null
     }`;
   });
-  console.log(info);
   const query = `
   begin
     UPDATE news SET ${info} WHERE ID = ${newID};
   end;`;
-  console.log(query);
 
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
@@ -1266,7 +1259,6 @@ adminRoute.post('/user', async (req, res) => {
         return;
       }
       const id = result.outBinds.id;
-      console.log(result);
       res.status(200).json({ message: 'success' });
       db.doRelease(connect);
     });
@@ -1374,7 +1366,6 @@ async function sendInvoice(result) {
           item['coupon_unit'] === 'percent'
             ? item['coupon_value'] + '%'
             : formatNumber(item['coupon_value'], ',') + '₫';
-        console.log(123);
       }
       item.product.forEach((t) => {
         t.image =
@@ -1391,12 +1382,10 @@ async function sendInvoice(result) {
       item['total'] = formatNumber(item['total'], ',');
       return item;
     })[0];
-    console.log(order);
     const data = order;
     const html = await readFile('./index.html', { encoding: 'utf-8' });
     const template = handlebars.compile(html);
     const htmlToSend = template(data);
-    console.log(123);
     await sendEmail({
       to: 'hoanganh2001hs@gmail.com',
       subject: 'Bạn đã đặt hàng thành công',
@@ -1464,7 +1453,6 @@ adminRoute.delete('/brand/:id', async (req, res) => {
         DELETE FROM brands WHERE id = ${brandId};
     end;
   `;
-  console.log(query);
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
@@ -1626,7 +1614,6 @@ adminRoute.delete('/coupon/:id', async (req, res) => {
         DELETE FROM brands WHERE id = ${brandId};
     end;
   `;
-  console.log(query);
   db.connect().then(async (connect) => {
     connect.execute(query, {}, { autoCommit: true }, (err, result) => {
       if (err) {
@@ -1645,7 +1632,6 @@ adminRoute.post('/coupon', async (req, res) => {
   const couponValue = req.body;
   const query = `INSERT INTO coupon(NAME,VALUE,UNIT,QUANTITY,START_DATE,EXPIRED_DATE)
       VALUES(:name,:value,:unit,:quantity,:start_date,:expired_date)`;
-  console.log(query);
   db.connect().then(async (connect) => {
     connect.execute(query, couponValue, { autoCommit: true }, (err, result) => {
       if (err) {

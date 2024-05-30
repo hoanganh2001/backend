@@ -161,8 +161,6 @@ userRoute.get('/active-account', (req, res) => {
       }
 
       if (result.rows.length > 0) {
-        console.log(2);
-
         res.send('<script>window.close();</script > ');
         db.doRelease(connect);
         return;
@@ -443,7 +441,6 @@ userRoute.post('/verifyOTP', (req, res) => {
 
 userRoute.put('/reset-password', (req, res) => {
   const { id, password } = req.body;
-  console.log(req);
   db.connect().then(async (connect) => {
     try {
       const updateQuery = `update user_account set password = ${password} where id = '${id}'`;
